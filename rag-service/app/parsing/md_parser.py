@@ -151,14 +151,8 @@ class MarkdownParser(ParsingStrategy):
         paragraphs: list[Paragraph],
     ) -> list[Section]:
         """构建章节"""
-        sections = []
-        section_paragraphs: list[Paragraph] = []
-        section_idx = 0
-        para_idx = 0
-
-        # 无标题时创建默认章节
         if not headings and paragraphs:
-            sections.append(
+            return [
                 Section(
                     id="sec_1",
                     title="Document",
@@ -167,39 +161,37 @@ class MarkdownParser(ParsingStrategy):
                     start_page=1,
                     end_page=1,
                 )
-            )
-            return sections
+            ]
 
-        for level, title in headings:
-            section_idx += 1
-
-            # 收集该标题下的段落
-            section_paragraphs = []
-            while para_idx < len(paragraphs):
-                section_paragraphs.append(paragraphs[para_idx])
-                para_idx += 1
-                if para_idx >= len(paragraphs):
-                    break
-                # 检查是否到了下一个标题
-                next_heading_idx = para_idx  # 简化处理
-                if next_heading_idx < len(headings):
-                    break
-
+        # Create a section for each heading
+        sections = []
+        for idx, (level, title) in enumerate(headings):
             section = Section(
-                id=f"sec_{section_idx}",
+                id=f"sec_{idx + 1}",
                 title=title,
                 level=level,
                 start_page=1,
                 end_page=1,
-                paragraphs=section_paragraphs[:],
+                paragraphs=[],
             )
-
-            # 父子关系
-            if sections and level > sections[-1].level:
-                section.parent_id = sections[-1].id
-                sections[-1].children.append(section)
-
             sections.append(section)
+
+        # Assign each paragraph to the last heading that appears BEFORE its position
+        for para in paragraphs:
+            # Find the last heading whose position is <= paragraph position
+            section_idx = -1
+            for i, heading in enumerate(headings):
+                if i <= para.position:
+                    section_idx = i
+            if section_idx >= 0:
+                sections[section_idx].paragraphs.append(para)
+
+        # Set parent relationships
+        for i, section in enumerate(sections):
+            for j in range(i - 1, -1, -1):
+                if sections[j].level < section.level:
+                    section.parent_id = sections[j].id
+                    break
 
         return sections
 

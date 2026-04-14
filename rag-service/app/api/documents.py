@@ -147,7 +147,7 @@ async def parse_document(file: UploadFile = File(...)) -> ParseResponse:
             {
                 "id": p.id,
                 "doc_id": doc_id,
-                "section_id": p.section_id,
+                "section_id": p.section_id or None,
                 "content": p.content,
                 "chunk_type": "paragraph",
                 "granularity": "paragraph",
@@ -158,6 +158,7 @@ async def parse_document(file: UploadFile = File(...)) -> ParseResponse:
             }
             for p in structure.paragraphs
         ]
+        logger.info(f"Saving {len(paragraph_chunks)} paragraphs to chunks table")
         if paragraph_chunks:
             await save_chunks(paragraph_chunks)
 

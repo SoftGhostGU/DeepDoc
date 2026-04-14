@@ -28,7 +28,8 @@
       "WebSearch",
       "Bash(.venv/Scripts/python -c \"with open\\('app/services/embedding.py', 'r'\\) as f: lines = f.readlines\\(\\); print\\(repr\\(lines[111]\\)\\)\")",
       "Bash(.venv/Scripts/python -c \"import ast; ast.parse\\(open\\('app/services/embedding.py', encoding='utf-8'\\).read\\(\\)\\)\")",
-      "Bash(.venv/Scripts/python -c ':*)"
+      "Bash(.venv/Scripts/python -c ':*)",
+      "Bash(.venv/Scripts/python -c \"from app.parsing.md_parser import MarkdownParser; print\\('OK'\\)\")"
     ]
   }
 }

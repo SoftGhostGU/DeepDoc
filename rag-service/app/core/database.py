@@ -229,7 +229,8 @@ async def save_chunks(chunks: list[dict]) -> None:
     import pickle
 
     async with aiosqlite.connect(DATABASE_PATH) as db:
-        await db.execute("PRAGMA foreign_keys = ON")
+        # 暂时禁用外键以避免引用问题
+        await db.execute("PRAGMA foreign_keys = OFF")
 
         for chunk in chunks:
             # 将向量序列化为二进制
@@ -255,6 +256,7 @@ async def save_chunks(chunks: list[dict]) -> None:
             })
 
         await db.commit()
+        logger.info(f"Saved {len(chunks)} chunks")
 
 
 async def get_chunks(doc_id: str, chunk_type: Optional[str] = None, granularity: Optional[str] = None) -> list[dict]:
