@@ -1,0 +1,17 @@
+2026-04-14 23:04:23.845 | INFO     | app.main:_lifespan:85 - DeepDoc RAG Service starting...
+2026-04-14 23:04:23.847 | INFO     | app.main:_lifespan:86 - Version: 0.1.0
+2026-04-14 23:04:23.847 | INFO     | app.main:_lifespan:87 - Debug mode: False
+2026-04-14 23:04:24.027 | INFO     | app.core.database:init_db:135 - Database initialized: data\deepdoc.db
+2026-04-14 23:04:35.862 | INFO     | app.api.documents:parse_document:109 - File saved: uploads\doc_3eec7fd6.pdf, size=236999 bytes
+2026-04-14 23:04:35.864 | INFO     | app.parsing.pdf_parser:parse:68 - Parsing PDF: uploads\doc_3eec7fd6.pdf
+2026-04-14 23:04:35.927 | INFO     | app.parsing.pdf_parser:parse:91 - Parsed PDF: doc_3eec7fd6, pages=2, sections=2, paragraphs=96
+2026-04-14 23:04:35.978 | INFO     | app.api.documents:parse_document:176 - Document parsed: doc_3eec7fd6
+2026-04-14 23:04:59.454 | INFO     | app.indexing.builder:build:80 - Building index with strategy: IndexStrategy.HIERARCHICAL
+2026-04-14 23:04:59.463 | INFO     | app.indexing.builder:build:89 - Deleted 96 old chunks
+2026-04-14 23:04:59.464 | INFO     | app.indexing.chunker:chunk:95 - Hierarchical chunking: 20 chunks, sections=2, paragraphs=18
+2026-04-14 23:04:59.464 | INFO     | app.services.embedding:_load_model:41 - Using remote embedding model: embedding-3
+2026-04-14 23:05:03.049 | INFO     | app.indexing.builder:_embed_and_save:189 - Saved 20 chunks with embeddings
+2026-04-14 23:05:03.056 | INFO     | app.indexing.builder:build:133 - Index built: hierarchical, chunks=20
+2026-04-14 23:05:03.216 | INFO     | app.core.database:optimize_db:342 - Database optimized
+2026-04-14 23:05:03.217 | INFO     | app.api.documents:build_index:199 - Index built for document: doc_3eec7fd6
+2026-04-14 23:05:30.145 | INFO     | app.main:_lifespan:97 - DeepDoc RAG Service shutting down...

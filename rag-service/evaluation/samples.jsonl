@@ -1,0 +1,2 @@
+{"query": "什么是RAG系统？", "ground_truth_context": "RAG是一种检索增强生成技术", "ground_truth_section_ids": ["sec_1"], "answer": "RAG是检索增强生成"}
+{"query": "DeepDoc的核心特色是什么？", "ground_truth_context": "可视化的层级化RAG检索", "ground_truth_section_ids": ["sec_2"], "answer": "层级化RAG"}

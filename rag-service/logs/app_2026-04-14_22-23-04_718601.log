@@ -1,0 +1,12 @@
+2026-04-14 22:23:04.721 | INFO     | app.main:_lifespan:85 - DeepDoc RAG Service starting...
+2026-04-14 22:23:04.721 | INFO     | app.main:_lifespan:86 - Version: 0.1.0
+2026-04-14 22:23:04.722 | INFO     | app.main:_lifespan:87 - Debug mode: False
+2026-04-14 22:23:04.732 | INFO     | app.core.database:init_db:116 - Database initialized: data\deepdoc.db
+2026-04-14 22:23:29.838 | INFO     | app.api.documents:parse_document:109 - File saved: uploads\doc_5b403885.pdf, size=1609729 bytes
+2026-04-14 22:23:29.838 | INFO     | app.parsing.pdf_parser:parse:68 - Parsing PDF: uploads\doc_5b403885.pdf
+2026-04-14 22:23:30.497 | INFO     | app.parsing.pdf_parser:parse:91 - Parsed PDF: doc_5b403885, pages=31, sections=83, paragraphs=1410
+2026-04-14 22:23:30.906 | INFO     | app.api.documents:parse_document:176 - Document parsed: doc_5b403885
+2026-04-14 22:23:43.514 | INFO     | app.indexing.builder:build:80 - Building index with strategy: IndexStrategy.HIERARCHICAL
+2026-04-14 22:23:43.528 | INFO     | app.indexing.builder:build:89 - Deleted 1410 old chunks
+2026-04-14 22:23:43.535 | INFO     | app.indexing.chunker:chunk:95 - Hierarchical chunking: 703 chunks, sections=83, paragraphs=620
+2026-04-14 22:23:43.535 | INFO     | app.services.embedding:_load_model:51 - Loading embedding model: BAAI/bge-large-zh-v1.5

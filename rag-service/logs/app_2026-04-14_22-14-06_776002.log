@@ -1,0 +1,13 @@
+2026-04-14 22:14:06.778 | INFO     | app.main:_lifespan:85 - DeepDoc RAG Service starting...
+2026-04-14 22:14:06.779 | INFO     | app.main:_lifespan:86 - Version: 0.1.0
+2026-04-14 22:14:06.779 | INFO     | app.main:_lifespan:87 - Debug mode: False
+2026-04-14 22:14:06.792 | INFO     | app.core.database:init_db:116 - Database initialized: data\deepdoc.db
+2026-04-14 22:14:29.988 | INFO     | app.api.documents:parse_document:109 - File saved: uploads\doc_1554825c.pdf, size=1609729 bytes
+2026-04-14 22:14:29.989 | INFO     | app.parsing.pdf_parser:parse:68 - Parsing PDF: uploads\doc_1554825c.pdf
+2026-04-14 22:14:30.594 | INFO     | app.parsing.pdf_parser:parse:91 - Parsed PDF: doc_1554825c, pages=31, sections=83, paragraphs=1410
+2026-04-14 22:14:30.930 | INFO     | app.api.documents:parse_document:176 - Document parsed: doc_1554825c
+2026-04-14 22:15:51.619 | ERROR    | app.main:app_exception_handler:33 - AppException: DOCUMENT_NOT_FOUND - 1 validation error for Section
+level
+  Input should be greater than or equal to 1 [type=greater_than_equal, input_value=0, input_type=int]
+    For further information visit https://errors.pydantic.dev/2.12/v/greater_than_equal
+2026-04-14 22:17:07.833 | INFO     | app.main:_lifespan:97 - DeepDoc RAG Service shutting down...

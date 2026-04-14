@@ -1,0 +1,231 @@
+2026-04-14 22:49:06.792 | INFO     | app.main:_lifespan:85 - DeepDoc RAG Service starting...
+2026-04-14 22:49:06.793 | INFO     | app.main:_lifespan:86 - Version: 0.1.0
+2026-04-14 22:49:06.793 | INFO     | app.main:_lifespan:87 - Debug mode: False
+2026-04-14 22:49:06.950 | INFO     | app.core.database:init_db:116 - Database initialized: data\deepdoc.db
+2026-04-14 22:49:20.091 | INFO     | app.api.documents:parse_document:109 - File saved: uploads\doc_726aa4ad.pdf, size=236999 bytes
+2026-04-14 22:49:20.091 | INFO     | app.parsing.pdf_parser:parse:68 - Parsing PDF: uploads\doc_726aa4ad.pdf
+2026-04-14 22:49:20.166 | INFO     | app.parsing.pdf_parser:parse:91 - Parsed PDF: doc_726aa4ad, pages=2, sections=2, paragraphs=96
+2026-04-14 22:49:20.225 | INFO     | app.api.documents:parse_document:176 - Document parsed: doc_726aa4ad
+2026-04-14 22:49:35.629 | INFO     | app.indexing.builder:build:80 - Building index with strategy: IndexStrategy.HIERARCHICAL
+2026-04-14 22:49:35.640 | INFO     | app.indexing.builder:build:89 - Deleted 96 old chunks
+2026-04-14 22:49:35.641 | INFO     | app.indexing.chunker:chunk:95 - Hierarchical chunking: 20 chunks, sections=2, paragraphs=18
+2026-04-14 22:49:35.642 | INFO     | app.services.embedding:_load_model:41 - Using remote embedding model: embedding-3
+2026-04-14 22:49:38.584 | INFO     | app.indexing.builder:_embed_and_save:187 - Saved 20 chunks with embeddings
+2026-04-14 22:49:38.589 | ERROR    | app.api.documents:build_index:205 - Failed to build index
+Traceback (most recent call last):
+
+  File "<string>", line 1, in <module>
+  File "C:\Users\GHOST\AppData\Local\Programs\Python\Python311\Lib\multiprocessing\spawn.py", line 120, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+               │     │   └ 344
+               │     └ 3
+               └ <function _main at 0x00000242A076F420>
+  File "C:\Users\GHOST\AppData\Local\Programs\Python\Python311\Lib\multiprocessing\spawn.py", line 133, in _main
+    return self._bootstrap(parent_sentinel)
+           │    │          └ 344
+           │    └ <function BaseProcess._bootstrap at 0x00000242A04EBEC0>
+           └ <SpawnProcess name='SpawnProcess-1' parent=30168 started>
+  File "C:\Users\GHOST\AppData\Local\Programs\Python\Python311\Lib\multiprocessing\process.py", line 314, in _bootstrap
+    self.run()
+    │    └ <function BaseProcess.run at 0x00000242A04EB420>
+    └ <SpawnProcess name='SpawnProcess-1' parent=30168 started>
+  File "C:\Users\GHOST\AppData\Local\Programs\Python\Python311\Lib\multiprocessing\process.py", line 108, in run
+    self._target(*self._args, **self._kwargs)
+    │    │        │    │        │    └ {'config': <uvicorn.config.Config object at 0x00000242CE437CD0>, 'target': <bound method Server.run of <uvicorn.server.Server...
+    │    │        │    │        └ <SpawnProcess name='SpawnProcess-1' parent=30168 started>
+    │    │        │    └ ()
+    │    │        └ <SpawnProcess name='SpawnProcess-1' parent=30168 started>
+    │    └ <function subprocess_started at 0x00000242A2B84E00>
+    └ <SpawnProcess name='SpawnProcess-1' parent=30168 started>
+  File "D:\Project\DeepDoc\rag-service\.venv\Lib\site-packages\uvicorn\_subprocess.py", line 80, in subprocess_started
+    target(sockets=sockets)
+    │              └ [<socket.socket fd=912, family=2, type=1, proto=6, laddr=('0.0.0.0', 8000)>]
+    └ <bound method Server.run of <uvicorn.server.Server object at 0x00000242CE4390D0>>
+  File "D:\Project\DeepDoc\rag-service\.venv\Lib\site-packages\uvicorn\server.py", line 75, in run
+    return asyncio_run(self.serve(sockets=sockets), loop_factory=self.config.get_loop_factory())
+           │           │    │             │                      │    │      └ <function Config.get_loop_factory at 0x00000242A2B18FE0>
+           │           │    │             │                      │    └ <uvicorn.config.Config object at 0x00000242CE437CD0>
+           │           │    │             │                      └ <uvicorn.server.Server object at 0x00000242CE4390D0>
+           │           │    │             └ [<socket.socket fd=912, family=2, type=1, proto=6, laddr=('0.0.0.0', 8000)>]
+           │           │    └ <function Server.serve at 0x00000242A2B73A60>
+           │           └ <uvicorn.server.Server object at 0x00000242CE4390D0>
+           └ <function asyncio_run at 0x00000242A2AE1F80>
+  File "D:\Project\DeepDoc\rag-service\.venv\Lib\site-packages\uvicorn\_compat.py", line 30, in asyncio_run
+    return runner.run(main)
+           │      │   └ <coroutine object Server.serve at 0x00000242A06D17B0>
+           │      └ <function Runner.run at 0x00000242A0E25440>
+           └ <asyncio.runners.Runner object at 0x00000242CE437E10>
+  File "C:\Users\GHOST\AppData\Local\Programs\Python\Python311\Lib\asyncio\runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           │    │     │                  └ <Task pending name='Task-1' coro=<Server.serve() running at D:\Project\DeepDoc\rag-service\.venv\Lib\site-packages\uvicorn\se...
+           │    │     └ <function BaseEventLoop.run_until_complete at 0x00000242A0E12F20>
+           │    └ <_WindowsSelectorEventLoop running=True closed=False debug=False>
+           └ <asyncio.runners.Runner object at 0x00000242CE437E10>
+  File "C:\Users\GHOST\AppData\Local\Programs\Python\Python311\Lib\asyncio\base_events.py", line 640, in run_until_complete
+    self.run_forever()
+    │    └ <function BaseEventLoop.run_forever at 0x00000242A0E12E80>
+    └ <_WindowsSelectorEventLoop running=True closed=False debug=False>
+  File "C:\Users\GHOST\AppData\Local\Programs\Python\Python311\Lib\asyncio\base_events.py", line 607, in run_forever
+    self._run_once()
+    │    └ <function BaseEventLoop._run_once at 0x00000242A0E24CC0>
+    └ <_WindowsSelectorEventLoop running=True closed=False debug=False>
+  File "C:\Users\GHOST\AppData\Local\Programs\Python\Python311\Lib\asyncio\base_events.py", line 1922, in _run_once
+    handle._run()
+    │      └ <function Handle._run at 0x00000242A0B8CE00>
+    └ <Handle Task.task_wakeup(<Future finis...0242A03958E0>>)>
+  File "C:\Users\GHOST\AppData\Local\Programs\Python\Python311\Lib\asyncio\events.py", line 80, in _run
+    self._context.run(self._callback, *self._args)
+    │    │            │    │           │    └ <member '_args' of 'Handle' objects>
+    │    │            │    │           └ <Handle Task.task_wakeup(<Future finis...0242A03958E0>>)>
+    │    │            │    └ <member '_callback' of 'Handle' objects>
+    │    │            └ <Handle Task.task_wakeup(<Future finis...0242A03958E0>>)>
+    │    └ <member '_context' of 'Handle' objects>
+    └ <Handle Task.task_wakeup(<Future finis...0242A03958E0>>)>
+  File "D:\Project\DeepDoc\rag-service\.venv\Lib\site-packages\uvicorn\protocols\http\httptools_impl.py", line 420, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+                   └ <uvicorn.middleware.proxy_headers.ProxyHeadersMiddleware object at 0x00000242CE4392D0>
+  File "D:\Project\DeepDoc\rag-service\.venv\Lib\site-packages\uvicorn\middleware\proxy_headers.py", line 60, in __call__
+    return await self.app(scope, receive, send)
+                 │    │   │      │        └ <bound method RequestResponseCycle.send of <uvicorn.protocols.http.httptools_impl.RequestResponseCycle object at 0x00000242A2...
+                 │    │   │      └ <bound method RequestResponseCycle.receive of <uvicorn.protocols.http.httptools_impl.RequestResponseCycle object at 0x0000024...
+                 │    │   └ {'type': 'http', 'asgi': {'version': '3.0', 'spec_version': '2.3'}, 'http_version': '1.1', 'server': ('127.0.0.1', 8000), 'cl...
+                 │    └ <fastapi.applications.FastAPI object at 0x00000242A2A38B10>
+                 └ <uvicorn.middleware.proxy_headers.ProxyHeadersMiddleware object at 0x00000242CE4392D0>
+  File "D:\Project\DeepDoc\rag-service\.venv\Lib\site-packages\fastapi\applications.py", line 1163, in __call__
+    await super().__call__(scope, receive, send)
+                           │      │        └ <bound method RequestResponseCycle.send of <uvicorn.protocols.http.httptools_impl.RequestResponseCycle object at 0x00000242A2...
+                           │      └ <bound method RequestResponseCycle.receive of <uvicorn.protocols.http.httptools_impl.RequestResponseCycle object at 0x0000024...
+                           └ {'type': 'http', 'asgi': {'version': '3.0', 'spec_version': '2.3'}, 'http_version': '1.1', 'server': ('127.0.0.1', 8000), 'cl...
+  File "D:\Project\DeepDoc\rag-service\.venv\Lib\site-packages\starlette\applications.py", line 90, in __call__
+    await self.middleware_stack(scope, receive, send)
+          │    │                │      │        └ <bound method RequestResponseCycle.send of <uvicorn.protocols.http.httptools_impl.RequestResponseCycle object at 0x00000242A2...
+          │    │                │      └ <bound method RequestResponseCycle.receive of <uvicorn.protocols.http.httptools_impl.RequestResponseCycle object at 0x0000024...
+          │    │                └ {'type': 'http', 'asgi': {'version': '3.0', 'spec_version': '2.3'}, 'http_version': '1.1', 'server': ('127.0.0.1', 8000), 'cl...
+          │    └ <starlette.middleware.errors.ServerErrorMiddleware object at 0x00000242CE438D10>
+          └ <fastapi.applications.FastAPI object at 0x00000242A2A38B10>
+  File "D:\Project\DeepDoc\rag-service\.venv\Lib\site-packages\starlette\middleware\errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+          │    │   │      │        └ <function ServerErrorMiddleware.__call__.<locals>._send at 0x00000242CE5118A0>
+          │    │   │      └ <bound method RequestResponseCycle.receive of <uvicorn.protocols.http.httptools_impl.RequestResponseCycle object at 0x0000024...
+          │    │   └ {'type': 'http', 'asgi': {'version': '3.0', 'spec_version': '2.3'}, 'http_version': '1.1', 'server': ('127.0.0.1', 8000), 'cl...
+          │    └ <starlette.middleware.cors.CORSMiddleware object at 0x00000242CC034410>
+          └ <starlette.middleware.errors.ServerErrorMiddleware object at 0x00000242CE438D10>
+  File "D:\Project\DeepDoc\rag-service\.venv\Lib\site-packages\starlette\middleware\cors.py", line 96, in __call__
+    await self.simple_response(scope, receive, send, request_headers=headers)
+          │    │               │      │        │                     └ Headers({'host': 'localhost:8000', 'connection': 'keep-alive', 'content-length': '66', 'sec-ch-ua-platform': '"Windows"', 'us...
+          │    │               │      │        └ <function ServerErrorMiddleware.__call__.<locals>._send at 0x00000242CE5118A0>
+          │    │               │      └ <bound method RequestResponseCycle.receive of <uvicorn.protocols.http.httptools_impl.RequestResponseCycle object at 0x0000024...
+          │    │               └ {'type': 'http', 'asgi': {'version': '3.0', 'spec_version': '2.3'}, 'http_version': '1.1', 'server': ('127.0.0.1', 8000), 'cl...
+          │    └ <function CORSMiddleware.simple_response at 0x00000242A3C41F80>
+          └ <starlette.middleware.cors.CORSMiddleware object at 0x00000242CC034410>
+  File "D:\Project\DeepDoc\rag-service\.venv\Lib\site-packages\starlette\middleware\cors.py", line 154, in simple_response
+    await self.app(scope, receive, send)
+          │    │   │      │        └ functools.partial(<bound method CORSMiddleware.send of <starlette.middleware.cors.CORSMiddleware object at 0x00000242CC034410...
+          │    │   │      └ <bound method RequestResponseCycle.receive of <uvicorn.protocols.http.httptools_impl.RequestResponseCycle object at 0x0000024...
+          │    │   └ {'type': 'http', 'asgi': {'version': '3.0', 'spec_version': '2.3'}, 'http_version': '1.1', 'server': ('127.0.0.1', 8000), 'cl...
+          │    └ <starlette.middleware.exceptions.ExceptionMiddleware object at 0x00000242CE4F0DD0>
+          └ <starlette.middleware.cors.CORSMiddleware object at 0x00000242CC034410>
+  File "D:\Project\DeepDoc\rag-service\.venv\Lib\site-packages\starlette\middleware\exceptions.py", line 63, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+          │                            │    │    │     │      │        └ functools.partial(<bound method CORSMiddleware.send of <starlette.middleware.cors.CORSMiddleware object at 0x00000242CC034410...
+          │                            │    │    │     │      └ <bound method RequestResponseCycle.receive of <uvicorn.protocols.http.httptools_impl.RequestResponseCycle object at 0x0000024...
+          │                            │    │    │     └ {'type': 'http', 'asgi': {'version': '3.0', 'spec_version': '2.3'}, 'http_version': '1.1', 'server': ('127.0.0.1', 8000), 'cl...
+          │                            │    │    └ <starlette.requests.Request object at 0x00000242A3E3A190>
+          │                            │    └ <fastapi.middleware.asyncexitstack.AsyncExitStackMiddleware object at 0x00000242CE4F0D90>
+          │                            └ <starlette.middleware.exceptions.ExceptionMiddleware object at 0x00000242CE4F0DD0>
+          └ <function wrap_app_handling_exceptions at 0x00000242A3B5BF60>
+  File "D:\Project\DeepDoc\rag-service\.venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+          │   │      │        └ <function wrap_app_handling_exceptions.<locals>.wrapped_app.<locals>.sender at 0x00000242CE511620>
+          │   │      └ <bound method RequestResponseCycle.receive of <uvicorn.protocols.http.httptools_impl.RequestResponseCycle object at 0x0000024...
+          │   └ {'type': 'http', 'asgi': {'version': '3.0', 'spec_version': '2.3'}, 'http_version': '1.1', 'server': ('127.0.0.1', 8000), 'cl...
+          └ <fastapi.middleware.asyncexitstack.AsyncExitStackMiddleware object at 0x00000242CE4F0D90>
+  File "D:\Project\DeepDoc\rag-service\.venv\Lib\site-packages\fastapi\middleware\asyncexitstack.py", line 18, in __call__
+    await self.app(scope, receive, send)
+          │    │   │      │        └ <function wrap_app_handling_exceptions.<locals>.wrapped_app.<locals>.sender at 0x00000242CE511620>
+          │    │   │      └ <bound method RequestResponseCycle.receive of <uvicorn.protocols.http.httptools_impl.RequestResponseCycle object at 0x0000024...
+          │    │   └ {'type': 'http', 'asgi': {'version': '3.0', 'spec_version': '2.3'}, 'http_version': '1.1', 'server': ('127.0.0.1', 8000), 'cl...
+          │    └ <fastapi.routing.APIRouter object at 0x00000242A2A1DA90>
+          └ <fastapi.middleware.asyncexitstack.AsyncExitStackMiddleware object at 0x00000242CE4F0D90>
+  File "D:\Project\DeepDoc\rag-service\.venv\Lib\site-packages\starlette\routing.py", line 660, in __call__
+    await self.middleware_stack(scope, receive, send)
+          │    │                │      │        └ <function wrap_app_handling_exceptions.<locals>.wrapped_app.<locals>.sender at 0x00000242CE511620>
+          │    │                │      └ <bound method RequestResponseCycle.receive of <uvicorn.protocols.http.httptools_impl.RequestResponseCycle object at 0x0000024...
+          │    │                └ {'type': 'http', 'asgi': {'version': '3.0', 'spec_version': '2.3'}, 'http_version': '1.1', 'server': ('127.0.0.1', 8000), 'cl...
+          │    └ <bound method Router.app of <fastapi.routing.APIRouter object at 0x00000242A2A1DA90>>
+          └ <fastapi.routing.APIRouter object at 0x00000242A2A1DA90>
+  File "D:\Project\DeepDoc\rag-service\.venv\Lib\site-packages\starlette\routing.py", line 680, in app
+    await route.handle(scope, receive, send)
+          │     │      │      │        └ <function wrap_app_handling_exceptions.<locals>.wrapped_app.<locals>.sender at 0x00000242CE511620>
+          │     │      │      └ <bound method RequestResponseCycle.receive of <uvicorn.protocols.http.httptools_impl.RequestResponseCycle object at 0x0000024...
+          │     │      └ {'type': 'http', 'asgi': {'version': '3.0', 'spec_version': '2.3'}, 'http_version': '1.1', 'server': ('127.0.0.1', 8000), 'cl...
+          │     └ <function Route.handle at 0x00000242A3B8D620>
+          └ APIRoute(path='/api/documents/{doc_id}/index', name='build_index', methods=['POST'])
+  File "D:\Project\DeepDoc\rag-service\.venv\Lib\site-packages\starlette\routing.py", line 276, in handle
+    await self.app(scope, receive, send)
+          │    │   │      │        └ <function wrap_app_handling_exceptions.<locals>.wrapped_app.<locals>.sender at 0x00000242CE511620>
+          │    │   │      └ <bound method RequestResponseCycle.receive of <uvicorn.protocols.http.httptools_impl.RequestResponseCycle object at 0x0000024...
+          │    │   └ {'type': 'http', 'asgi': {'version': '3.0', 'spec_version': '2.3'}, 'http_version': '1.1', 'server': ('127.0.0.1', 8000), 'cl...
+          │    └ <function request_response.<locals>.app at 0x00000242CE3AADE0>
+          └ APIRoute(path='/api/documents/{doc_id}/index', name='build_index', methods=['POST'])
+  File "D:\Project\DeepDoc\rag-service\.venv\Lib\site-packages\fastapi\routing.py", line 134, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+          │                            │    │        │      │        └ <function wrap_app_handling_exceptions.<locals>.wrapped_app.<locals>.sender at 0x00000242CE511620>
+          │                            │    │        │      └ <bound method RequestResponseCycle.receive of <uvicorn.protocols.http.httptools_impl.RequestResponseCycle object at 0x0000024...
+          │                            │    │        └ {'type': 'http', 'asgi': {'version': '3.0', 'spec_version': '2.3'}, 'http_version': '1.1', 'server': ('127.0.0.1', 8000), 'cl...
+          │                            │    └ <starlette.requests.Request object at 0x00000242CE543490>
+          │                            └ <function request_response.<locals>.app.<locals>.app at 0x00000242CE511760>
+          └ <function wrap_app_handling_exceptions at 0x00000242A3B5BF60>
+  File "D:\Project\DeepDoc\rag-service\.venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+          │   │      │        └ <function wrap_app_handling_exceptions.<locals>.wrapped_app.<locals>.sender at 0x00000242CE511800>
+          │   │      └ <bound method RequestResponseCycle.receive of <uvicorn.protocols.http.httptools_impl.RequestResponseCycle object at 0x0000024...
+          │   └ {'type': 'http', 'asgi': {'version': '3.0', 'spec_version': '2.3'}, 'http_version': '1.1', 'server': ('127.0.0.1', 8000), 'cl...
+          └ <function request_response.<locals>.app.<locals>.app at 0x00000242CE511760>
+  File "D:\Project\DeepDoc\rag-service\.venv\Lib\site-packages\fastapi\routing.py", line 120, in app
+    response = await f(request)
+                     │ └ <starlette.requests.Request object at 0x00000242CE543490>
+                     └ <function get_request_handler.<locals>.app at 0x00000242A43CE480>
+  File "D:\Project\DeepDoc\rag-service\.venv\Lib\site-packages\fastapi\routing.py", line 674, in app
+    raw_response = await run_endpoint_function(
+                         └ <function run_endpoint_function at 0x00000242A3B8F6A0>
+  File "D:\Project\DeepDoc\rag-service\.venv\Lib\site-packages\fastapi\routing.py", line 328, in run_endpoint_function
+    return await dependant.call(**values)
+                 │         │      └ {'doc_id': 'doc_726aa4ad', 'request': IndexRequest(doc_id='string', strategies=[<IndexStrategy.HIERARCHICAL: 'hierarchical'>])}
+                 │         └ <function build_index at 0x00000242A43CE2A0>
+                 └ Dependant(path_params=[ModelField(field_info=Path(PydanticUndefined), name='doc_id', mode='validation', config=None)], query_...
+
+> File "D:\Project\DeepDoc\rag-service\app\api\documents.py", line 198, in build_index
+    response = await builder.build(doc_id, request)
+                     │       │     │       └ IndexRequest(doc_id='string', strategies=[<IndexStrategy.HIERARCHICAL: 'hierarchical'>])
+                     │       │     └ 'doc_726aa4ad'
+                     │       └ <function IndexBuilder.build at 0x00000242CE512660>
+                     └ <app.indexing.builder.IndexBuilder object at 0x00000242CBF8D550>
+
+  File "D:\Project\DeepDoc\rag-service\app\indexing\builder.py", line 119, in build
+    await save_index({
+          └ <function save_index at 0x00000242A3DBE2A0>
+
+  File "D:\Project\DeepDoc\rag-service\app\core\database.py", line 291, in save_index
+    await db.execute("""
+          │  └ <function Connection.execute at 0x00000242A3D3B2E0>
+          └ <aiosqlite.core.Connection object at 0x00000242CBF34850>
+
+  File "D:\Project\DeepDoc\rag-service\.venv\Lib\site-packages\aiosqlite\core.py", line 223, in execute
+    cursor = await self._execute(self._conn.execute, sql, parameters)
+                   │    │        │    │              │    └ {'id': 'doc_726aa4ad_hierarchical', 'doc_id': 'doc_726aa4ad', 'strategy': 'hierarchical', 'chunk_count': 20, 'status': 'ready...
+                   │    │        │    │              └ '\n            INSERT OR REPLACE INTO indices (\n                id, doc_id, strategy, chunk_count, status,\n                ...
+                   │    │        │    └ <property object at 0x00000242A3D43880>
+                   │    │        └ <aiosqlite.core.Connection object at 0x00000242CBF34850>
+                   │    └ <function Connection._execute at 0x00000242A3D3AC00>
+                   └ <aiosqlite.core.Connection object at 0x00000242CBF34850>
+  File "D:\Project\DeepDoc\rag-service\.venv\Lib\site-packages\aiosqlite\core.py", line 160, in _execute
+    return await future
+                 └ <Future finished exception=IntegrityError('NOT NULL constraint failed: indices.collection_name')>
+  File "D:\Project\DeepDoc\rag-service\.venv\Lib\site-packages\aiosqlite\core.py", line 63, in _connection_worker_thread
+    result = function()
+             └ <function Connection.stop.<locals>.close_and_stop at 0x00000242CE70A480>
+
+sqlite3.IntegrityError: NOT NULL constraint failed: indices.collection_name
+2026-04-14 22:49:38.616 | ERROR    | app.main:app_exception_handler:33 - AppException: INDEX_ERROR - Index building failed
+2026-04-14 22:51:02.143 | INFO     | app.main:_lifespan:97 - DeepDoc RAG Service shutting down...

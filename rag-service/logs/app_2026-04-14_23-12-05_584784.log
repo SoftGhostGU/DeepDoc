@@ -1,0 +1,18 @@
+2026-04-14 23:12:05.590 | INFO     | app.main:_lifespan:85 - DeepDoc RAG Service starting...
+2026-04-14 23:12:05.591 | INFO     | app.main:_lifespan:86 - Version: 0.1.0
+2026-04-14 23:12:05.591 | INFO     | app.main:_lifespan:87 - Debug mode: False
+2026-04-14 23:12:05.893 | INFO     | app.core.database:init_db:135 - Database initialized: data\deepdoc.db
+2026-04-14 23:12:25.854 | INFO     | app.api.documents:parse_document:109 - File saved: uploads\doc_fadb0114.md, size=6598 bytes
+2026-04-14 23:12:25.855 | INFO     | app.parsing.md_parser:parse:39 - Parsing Markdown: uploads\doc_fadb0114.md
+2026-04-14 23:12:25.860 | INFO     | app.parsing.md_parser:parse:60 - Parsed Markdown: doc_fadb0114, sections=37, paragraphs=17
+2026-04-14 23:12:25.920 | INFO     | app.api.documents:parse_document:176 - Document parsed: doc_fadb0114
+2026-04-14 23:12:31.024 | INFO     | app.api.documents:parse_document:109 - File saved: uploads\doc_ebd79a13.md, size=7374 bytes
+2026-04-14 23:12:31.025 | INFO     | app.parsing.md_parser:parse:39 - Parsing Markdown: uploads\doc_ebd79a13.md
+2026-04-14 23:12:31.029 | INFO     | app.parsing.md_parser:parse:60 - Parsed Markdown: doc_ebd79a13, sections=31, paragraphs=34
+2026-04-14 23:12:31.081 | INFO     | app.api.documents:parse_document:176 - Document parsed: doc_ebd79a13
+2026-04-14 23:13:19.275 | INFO     | app.indexing.builder:build:80 - Building index with strategy: IndexStrategy.HIERARCHICAL
+2026-04-14 23:13:19.284 | INFO     | app.indexing.builder:build:89 - Deleted 34 old chunks
+2026-04-14 23:13:19.285 | INFO     | app.indexing.chunker:chunk:95 - Hierarchical chunking: 0 chunks, sections=0, paragraphs=0
+2026-04-14 23:13:19.293 | INFO     | app.indexing.builder:build:133 - Index built: hierarchical, chunks=0
+2026-04-14 23:13:19.571 | INFO     | app.core.database:optimize_db:342 - Database optimized
+2026-04-14 23:13:19.571 | INFO     | app.api.documents:build_index:199 - Index built for document: doc_ebd79a13

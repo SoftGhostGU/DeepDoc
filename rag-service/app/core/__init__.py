@@ -1,0 +1,57 @@
+"""核心模块初始化"""
+from app.core.config import Settings, get_settings
+from app.core.database import (
+    init_db,
+    save_document,
+    get_document,
+    list_documents,
+    update_document_status,
+    save_index,
+    get_indices,
+    get_sections,
+    save_sections,
+    get_chunks,
+    save_chunks,
+    delete_chunks,
+    optimize_db,
+)
+from app.core.logging import (
+    init_logging,
+    debug,
+    error,
+    exception,
+    info,
+    success,
+    trace,
+    warning,
+)
+from app.core.logging import logger
+
+__all__ = [
+    "Settings",
+    "get_settings",
+    "init_logging",
+    "init_db",
+    "save_document",
+    "get_document",
+    "list_documents",
+    "update_document_status",
+    "save_index",
+    "get_indices",
+    "get_sections",
+    "save_sections",
+    "get_chunks",
+    "save_chunks",
+    "delete_chunks",
+    "optimize_db",
+    "logger",
+    "debug",
+    "info",
+    "success",
+    "warning",
+    "error",
+    "critical",
+    "exception",
+    "trace",
+    "log_with_context",
+]

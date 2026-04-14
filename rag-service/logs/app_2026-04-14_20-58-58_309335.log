@@ -1,0 +1,4 @@
+2026-04-14 20:58:58.311 | INFO     | app.main:_lifespan:85 - DeepDoc RAG Service starting...
+2026-04-14 20:58:58.311 | INFO     | app.main:_lifespan:86 - Version: 0.1.0
+2026-04-14 20:58:58.311 | INFO     | app.main:_lifespan:87 - Debug mode: False
+2026-04-14 20:58:58.320 | INFO     | app.core.database:init_db:116 - Database initialized: data\deepdoc.db
