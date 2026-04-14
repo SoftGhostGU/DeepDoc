@@ -1,0 +1,145 @@
+"use client";
+
+import { useEffect, useMemo, useRef, useState } from "react";
+
+import { ChatInput } from "@/components/rag/chat-input";
+import { ChatMessage } from "@/components/rag/chat-message";
+import { CitationPanel } from "@/components/rag/citation-panel";
+import { StageIndicator } from "@/components/rag/stage-indicator";
+import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { useChatStore } from "@/lib/stores/chat-store";
+import type { Citation } from "@/types";
+
+interface ChatWindowProps {
+  documentId: string;
+  sessionId?: string;
+}
+
+export function ChatWindow({ documentId, sessionId }: ChatWindowProps) {
+  const bottomRef = useRef<HTMLDivElement | null>(null);
+  const [selectedCitation, setSelectedCitation] = useState<Citation | null>(null);
+  const [contextCitation, setContextCitation] = useState<Citation | null>(null);
+
+  const {
+    messagesBySession,
+    isStreaming,
+    currentStage,
+    streamError,
+    clearError,
+    sendMessage,
+  } = useChatStore((state) => ({
+    messagesBySession: state.messagesBySession,
+    isStreaming: state.isStreaming,
+    currentStage: state.currentStage,
+    streamError: state.streamError,
+    clearError: state.clearError,
+    sendMessage: state.sendMessage,
+  }));
+
+  const messages = useMemo(
+    () => (sessionId ? messagesBySession[sessionId] ?? [] : []),
+    [messagesBySession, sessionId],
+  );
+
+  const latestCitations = useMemo(() => {
+    const latestAssistantWithCitations = [...messages]
+      .reverse()
+      .find((message) => message.role === "ASSISTANT" && (message.citations?.length ?? 0) > 0);
+
+    return latestAssistantWithCitations?.citations ?? [];
+  }, [messages]);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, isStreaming, currentStage]);
+
+  const effectiveSelectedCitation =
+    selectedCitation && latestCitations.some((citation) => citation.id === selectedCitation.id)
+      ? selectedCitation
+      : null;
+
+  const effectiveContextCitation =
+    contextCitation && latestCitations.some((citation) => citation.id === contextCitation.id)
+      ? contextCitation
+      : null;
+
+  return (
+    <div className="grid h-full min-h-[70vh] gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">
+      <div className="flex min-h-0 flex-col gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-slate-800">Conversation</h2>
+          <StageIndicator stage={currentStage} />
+        </div>
+
+        <ScrollArea className="min-h-0 flex-1 rounded-lg border border-slate-200 bg-white p-3">
+          <div className="space-y-3">
+            {messages.length === 0 && (
+              <p className="rounded-lg border border-dashed border-slate-200 bg-slate-50 p-4 text-sm text-slate-500">
+                Start by asking a question about this document.
+              </p>
+            )}
+
+            {messages.map((message) => (
+              <ChatMessage
+                key={message.id}
+                message={message}
+                selectedCitationId={effectiveSelectedCitation?.id}
+                onCitationClick={(citation) => {
+                  setSelectedCitation(citation);
+                  setContextCitation(null);
+                }}
+              />
+            ))}
+            <div ref={bottomRef} />
+          </div>
+        </ScrollArea>
+
+        {streamError && (
+          <div className="flex items-center justify-between rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+            <span>{streamError}</span>
+            <Button size="sm" variant="ghost" onClick={clearError}>
+              Dismiss
+            </Button>
+          </div>
+        )}
+
+        <ChatInput
+          disabled={isStreaming || !sessionId}
+          onSubmit={(query) =>
+            sendMessage({
+              documentId,
+              sessionId,
+              query,
+            })
+          }
+        />
+      </div>
+
+      <div className="flex min-h-0 flex-col gap-3">
+        <CitationPanel
+          citations={latestCitations}
+          selectedId={effectiveSelectedCitation?.id}
+          onSelect={(citation) => {
+            setSelectedCitation(citation);
+            setContextCitation(null);
+          }}
+          onViewContext={(citation) => {
+            setSelectedCitation(citation);
+            setContextCitation(citation);
+          }}
+        />
+
+        {effectiveContextCitation && (
+          <section className="rounded-xl border border-slate-200 bg-white p-4">
+            <h3 className="text-sm font-semibold text-slate-900">Context view</h3>
+            <p className="mt-1 text-xs text-slate-500">{effectiveContextCitation.path.join(" > ")}</p>
+            <p className="mt-3 rounded-md bg-amber-50 px-3 py-2 text-sm text-slate-800">
+              {effectiveContextCitation.text}
+            </p>
+          </section>
+        )}
+      </div>
+    </div>
+  );
+}
