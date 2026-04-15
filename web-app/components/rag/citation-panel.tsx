@@ -36,15 +36,15 @@ export function CitationPanel({
   }, [selectedId]);
 
   return (
-    <Card className="h-full border-slate-700/70 bg-[#0f1d32]/95">
+    <Card className="h-full border-[var(--border-subtle)] bg-[var(--surface-raised)]">
       <CardHeader className="pb-3">
-        <CardTitle className="text-base text-cyan-100">引用来源</CardTitle>
+        <CardTitle className="text-base text-[var(--foreground)]">引用来源</CardTitle>
       </CardHeader>
       <CardContent className="p-0">
         <ScrollArea className="h-[420px] px-4 pb-4">
           <div className="space-y-3">
             {citations.length === 0 && (
-              <p className="rounded-md border border-dashed border-slate-600/75 bg-[#0b1a2f]/75 p-3 text-sm text-slate-400">
+              <p className="rounded-md border border-dashed border-[var(--border-subtle)] bg-[var(--surface)] p-3 text-sm text-[var(--foreground-dim)]">
                 暂无引用
               </p>
             )}
@@ -55,10 +55,10 @@ export function CitationPanel({
                   itemRefs.current[citation.id] = element;
                 }}
                 className={cn(
-                  "rounded-lg border bg-[#0b1a2f]/75 p-3 transition-[border-color,box-shadow,transform] duration-200 hover:-translate-y-px",
+                  "rounded-lg border bg-[var(--surface)] p-3 transition-[border-color,box-shadow,transform] duration-200 hover:-translate-y-px",
                   selectedId === citation.id
-                    ? "animate-citation-pulse border-cyan-300/70 bg-cyan-400/10 shadow-[0_0_18px_rgba(0,212,255,0.26)]"
-                    : "border-slate-700/75 hover:border-cyan-300/40",
+                    ? "animate-citation-pulse border-[var(--border)] bg-[var(--accent-subtle)] shadow-[0_10px_20px_rgba(79,70,229,0.16)]"
+                    : "border-[var(--border-subtle)] hover:border-[var(--border)]",
                 )}
               >
                 <button
@@ -66,14 +66,14 @@ export function CitationPanel({
                   onClick={() => onSelect?.(citation)}
                   className="mb-2 flex w-full items-center justify-between text-left"
                 >
-                  <span className="text-sm font-semibold text-cyan-100">[{citation.id}]</span>
-                  <span className="font-mono text-xs text-slate-400">
+                  <span className="text-sm font-semibold text-[var(--foreground)]">[{citation.id}]</span>
+                  <span className="font-mono text-xs text-[var(--foreground-dim)]">
                     相关度 {(citation.score * 100).toFixed(0)}%
                   </span>
                 </button>
 
-                <p className="line-clamp-4 text-sm text-slate-200">{citation.text}</p>
-                <p className="mt-2 text-xs text-slate-400">{citation.path.join(" > ")}</p>
+                <p className="line-clamp-4 text-sm text-[var(--foreground)]">{citation.text}</p>
+                <p className="mt-2 text-xs text-[var(--foreground-dim)]">{citation.path.join(" > ")}</p>
 
                 <Button
                   size="sm"

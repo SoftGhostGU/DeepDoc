@@ -65,8 +65,8 @@ export default function ChatDocumentPage() {
   return (
     <section className="animate-fade-in-up flex h-full min-h-[70vh] flex-col gap-4">
       <header>
-        <h1 className="text-2xl font-semibold text-cyan-100">问答工作区</h1>
-        <p className="mt-1 text-sm text-slate-300">
+        <h1 className="text-2xl font-semibold text-[var(--foreground)]">问答工作区</h1>
+        <p className="mt-1 text-sm text-[var(--foreground-muted)]">
           文档：{currentDocument?.originalName ?? documentId}
         </p>
       </header>

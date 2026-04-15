@@ -22,19 +22,19 @@ export function AppSidebar() {
   }, [fetchDocuments]);
 
   return (
-    <aside className="flex w-full flex-col border-b border-slate-700/70 bg-[#0b1a2f]/85 p-4 shadow-[inset_0_-1px_0_rgba(148,163,184,0.08)] backdrop-blur-sm md:h-full md:max-w-xs md:border-r md:border-b-0 md:shadow-[inset_-1px_0_0_rgba(148,163,184,0.08)]">
+    <aside className="flex w-full flex-col border-b border-[var(--border-subtle)] bg-[color:rgba(17,17,19,0.94)] p-4 backdrop-blur-sm md:h-full md:max-w-xs md:border-r md:border-b-0">
       <div className="mb-4 flex items-center justify-between gap-2">
         <Link
           href="/documents"
           className={cn(
-            "group relative flex items-center gap-2 rounded-md px-2 py-1.5 text-sm font-semibold text-slate-200 transition",
-            isDocumentsActive && "text-cyan-100",
+            "group relative flex items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium text-[var(--foreground-muted)] transition",
+            isDocumentsActive && "bg-[var(--accent-subtle)] text-[var(--accent-hover)]",
           )}
         >
           <span
             className={cn(
               "absolute left-0 h-5 w-0.5 rounded-full bg-transparent transition",
-              isDocumentsActive && "bg-cyan-300 shadow-[0_0_14px_rgba(0,212,255,0.7)]",
+              isDocumentsActive && "bg-[var(--accent)]",
             )}
           />
           <Library className="h-4 w-4" />

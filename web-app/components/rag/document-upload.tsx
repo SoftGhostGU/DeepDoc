@@ -130,9 +130,9 @@ export function DocumentUpload({ compact = false, onUploaded }: DocumentUploadPr
   };
 
   return (
-    <Card className="border-slate-700/70 bg-[#0f1d32]/92">
+    <Card className="border-[var(--border-subtle)] bg-[var(--surface-raised)]">
       <CardHeader className={compact ? "pb-3" : ""}>
-        <h2 className="text-base font-semibold tracking-wide text-cyan-100">上传文档</h2>
+        <h2 className="text-base font-semibold text-[var(--foreground)]">上传文档</h2>
         {!compact && (
           <CardDescription>
             支持 PDF、Markdown 和文本文件，最大 {formatFileSize(MAX_FILE_SIZE_BYTES)}
@@ -166,34 +166,34 @@ export function DocumentUpload({ compact = false, onUploaded }: DocumentUploadPr
           }}
           className={`w-full rounded-lg border border-dashed px-4 py-6 text-left transition-[border-color,background-color,box-shadow] duration-200 ${
             isDragging
-              ? "border-cyan-300/70 bg-cyan-400/10 shadow-[0_0_24px_rgba(0,212,255,0.22)]"
-              : "border-slate-600 bg-[#0b1a2f]/75 hover:border-cyan-300/45"
+              ? "border-[var(--accent)] bg-[var(--accent-subtle)] shadow-[0_12px_28px_rgba(79,70,229,0.18)]"
+              : "border-[var(--border)] bg-[var(--surface)] hover:border-[var(--accent)]"
           }`}
         >
           <div className="flex items-start gap-3">
-            <div className="rounded-md border border-cyan-300/20 bg-cyan-400/12 p-2 text-cyan-100">
+            <div className="rounded-md border border-[color:rgba(99,102,241,0.18)] bg-[var(--accent-subtle)] p-2 text-[var(--accent-hover)]">
               <Upload className="h-4 w-4" />
             </div>
             <div className="min-w-0">
-              <p className="text-sm font-medium text-slate-100">拖拽文件到此处</p>
-              <p className="text-xs text-slate-400">{helperText}</p>
+              <p className="text-sm font-medium text-[var(--foreground)]">拖拽文件到此处</p>
+              <p className="text-xs text-[var(--foreground-dim)]">{helperText}</p>
             </div>
           </div>
         </button>
 
         {progress > 0 && isUploading && (
           <div className="space-y-1">
-            <div className="h-2 rounded-full bg-slate-800">
+            <div className="h-2 rounded-full bg-[var(--surface-hover)]">
               <div
-                className="animate-shimmer h-2 rounded-full bg-[linear-gradient(90deg,rgba(34,211,238,0.55),rgba(125,211,252,0.95),rgba(34,211,238,0.55))] transition-all"
+                className="animate-shimmer h-2 rounded-full bg-[linear-gradient(90deg,rgba(99,102,241,0.35),rgba(129,140,248,0.9),rgba(79,70,229,0.35))] transition-all"
                 style={{ width: `${progress}%` }}
               />
             </div>
-            <p className="font-mono text-xs text-cyan-200">上传中... {progress}%</p>
+            <p className="font-mono text-xs text-[var(--foreground-dim)]">上传中... {progress}%</p>
           </div>
         )}
 
-        {error && <p className="text-xs text-rose-300">{error}</p>}
+        {error && <p className="text-xs text-[#fca5a5]">{error}</p>}
 
         <Button onClick={upload} disabled={!selectedFile || isUploading} className="w-full">
           {isUploading ? (

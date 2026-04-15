@@ -9,15 +9,16 @@ const badgeVariants = cva(
     variants: {
       variant: {
         default:
-          "border-cyan-300/35 bg-cyan-400/18 text-cyan-100 shadow-[0_0_12px_rgba(0,212,255,0.25)]",
-        secondary: "border-slate-600/90 bg-slate-700/55 text-slate-200",
-        outline: "border-slate-500 text-slate-300",
+          "border-[color:rgba(99,102,241,0.18)] bg-[var(--accent-subtle)] text-[var(--accent-hover)]",
+        secondary:
+          "border-[var(--border-subtle)] bg-[var(--surface-hover)] text-[var(--foreground-muted)]",
+        outline: "border-[var(--border)] text-[var(--foreground-muted)]",
         success:
-          "border-emerald-300/45 bg-emerald-500/20 text-emerald-100 shadow-[0_0_16px_rgba(16,185,129,0.3)]",
+          "border-[color:rgba(34,197,94,0.16)] bg-[color:rgba(34,197,94,0.1)] text-[#86efac]",
         warning:
-          "animate-pulse-glow border-amber-200/45 bg-amber-400/22 text-amber-100 shadow-[0_0_16px_rgba(245,158,11,0.3)]",
+          "border-[color:rgba(234,179,8,0.16)] bg-[color:rgba(234,179,8,0.1)] text-[#fde047]",
         danger:
-          "border-rose-300/45 bg-rose-500/20 text-rose-100 shadow-[0_0_16px_rgba(244,63,94,0.28)]",
+          "border-[color:rgba(239,68,68,0.16)] bg-[color:rgba(239,68,68,0.1)] text-[#fca5a5]",
       },
     },
     defaultVariants: {

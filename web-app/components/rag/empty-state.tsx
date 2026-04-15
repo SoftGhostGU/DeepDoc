@@ -4,15 +4,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export function EmptyState() {
   return (
-    <Card className="border-dashed border-slate-600/75 bg-[#0f1d32]/85">
+    <Card className="border-dashed border-[var(--border)] bg-[var(--surface-raised)]">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-base text-cyan-100">
+        <CardTitle className="flex items-center gap-2 text-base text-[var(--foreground)]">
           <FileText className="h-4 w-4" />
           暂无文档
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <p className="text-sm text-slate-300">
+        <p className="text-sm text-[var(--foreground-muted)]">
           上传您的第一个 PDF、Markdown 或文本文件，开始智能问答
         </p>
       </CardContent>

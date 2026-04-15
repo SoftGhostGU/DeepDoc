@@ -5,19 +5,20 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md border border-transparent text-sm font-medium tracking-wide transition-[background-color,color,border-color,box-shadow,transform] duration-200 ease-out disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-cyan-300/60 focus-visible:ring-offset-1 focus-visible:ring-offset-[#0a1628] active:scale-[0.97] [&_svg]:pointer-events-none [&_svg]:size-4",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg border border-transparent text-sm font-medium transition-[background-color,color,border-color,box-shadow,transform,filter] duration-200 ease-out disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[var(--accent-subtle)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--background)] active:scale-[0.97] [&_svg]:pointer-events-none [&_svg]:size-4",
   {
     variants: {
       variant: {
         default:
-          "bg-cyan-400 text-slate-950 shadow-[0_0_0_1px_rgba(0,212,255,0.3)] hover:bg-cyan-300 hover:shadow-[0_0_22px_rgba(0,212,255,0.35)]",
+          "bg-[linear-gradient(180deg,var(--accent),var(--accent-muted))] text-white shadow-[0_10px_24px_rgba(79,70,229,0.32)] hover:brightness-110 hover:shadow-[0_12px_30px_rgba(79,70,229,0.38)]",
         secondary:
-          "border-slate-700 bg-[#142238] text-slate-100 hover:border-slate-500 hover:bg-[#1a2c47]",
+          "border-[var(--border-subtle)] bg-[var(--surface-raised)] text-[var(--foreground)] hover:bg-[var(--surface-hover)]",
         outline:
-          "border-slate-600 bg-[#0f1d32]/85 text-slate-100 hover:border-cyan-300/60 hover:text-cyan-100",
-        ghost: "text-slate-300 hover:bg-cyan-400/10 hover:text-cyan-100",
+          "border-[var(--border)] bg-transparent text-[var(--foreground-muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--foreground)]",
+        ghost:
+          "text-[var(--foreground-muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--foreground)]",
         destructive:
-          "bg-rose-600 text-rose-50 shadow-[0_0_0_1px_rgba(244,63,94,0.35)] hover:bg-rose-500 hover:shadow-[0_0_20px_rgba(244,63,94,0.3)]",
+          "border-[color:rgba(239,68,68,0.16)] bg-[color:rgba(239,68,68,0.14)] text-[#fca5a5] hover:bg-[color:rgba(239,68,68,0.2)] hover:text-[#fecaca]",
       },
       size: {
         default: "h-9 px-4 py-2",

@@ -28,11 +28,11 @@ export function CitationSummaryFooter({
   }
 
   return (
-    <div className="mt-3 rounded-md border border-slate-600/80 bg-[#0a1b32] p-2">
+    <div className="mt-3 rounded-md border border-[var(--border-subtle)] bg-[var(--surface)] p-2">
       <Button
         variant="ghost"
         size="sm"
-        className="h-auto w-full justify-between px-2 py-1 text-xs text-slate-300 hover:text-cyan-100"
+        className="h-auto w-full justify-between px-2 py-1 text-xs text-[var(--foreground-muted)] hover:text-[var(--foreground)]"
         onClick={() => setOpen((prev) => !prev)}
       >
         <span>基于 {citations.length} 个来源</span>

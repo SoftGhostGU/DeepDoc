@@ -85,16 +85,16 @@ export function ChatWindow({ documentId, sessionId }: ChatWindowProps) {
 
   return (
     <div className="grid h-full min-h-[70vh] gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">
-      <div className="flex min-h-0 flex-col gap-3 rounded-xl border border-slate-700/70 bg-[#0f1d32]/90 p-3 shadow-[0_18px_42px_rgba(2,8,23,0.45)]">
+      <div className="flex min-h-0 flex-col gap-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface)] p-3 shadow-[0_14px_32px_rgba(0,0,0,0.16)]">
         <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold tracking-wide text-cyan-100">对话</h2>
+          <h2 className="text-sm font-semibold text-[var(--foreground)]">对话</h2>
           <StageIndicator stage={currentStage} />
         </div>
 
-        <ScrollArea className="min-h-0 flex-1 rounded-lg border border-slate-700/75 bg-[#091a30]/92 p-3">
+        <ScrollArea className="min-h-0 flex-1 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-raised)] p-3">
           <div className="space-y-3">
             {messages.length === 0 && (
-              <p className="rounded-lg border border-dashed border-slate-600/70 bg-[#0f1d32]/85 p-4 text-sm text-slate-400">
+              <p className="rounded-lg border border-dashed border-[var(--border-subtle)] bg-[var(--surface)] p-4 text-sm text-[var(--foreground-dim)]">
                 向文档提问，开始智能问答吧
               </p>
             )}
@@ -116,7 +116,7 @@ export function ChatWindow({ documentId, sessionId }: ChatWindowProps) {
         </ScrollArea>
 
         {streamError && (
-          <div className="flex items-center justify-between rounded-md border border-rose-300/40 bg-rose-500/18 px-3 py-2 text-xs text-rose-100">
+          <div className="flex items-center justify-between rounded-md border border-[color:rgba(239,68,68,0.16)] bg-[color:rgba(239,68,68,0.1)] px-3 py-2 text-xs text-[#fca5a5]">
             <span>{streamError}</span>
             <Button size="sm" variant="ghost" onClick={clearError}>
               关闭
@@ -151,10 +151,10 @@ export function ChatWindow({ documentId, sessionId }: ChatWindowProps) {
         />
 
         {effectiveContextCitation && (
-          <section className="animate-fade-in-up rounded-xl border border-slate-700/65 bg-[#0f1d32]/92 p-4 shadow-[0_14px_36px_rgba(2,8,23,0.36)]">
-            <h3 className="text-sm font-semibold text-cyan-100">上下文视图</h3>
-            <p className="mt-1 text-xs text-slate-400">{effectiveContextCitation.path.join(" > ")}</p>
-            <p className="mt-3 rounded-md border border-amber-300/30 bg-amber-400/14 px-3 py-2 text-sm text-amber-50">
+          <section className="animate-fade-in-up rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-raised)] p-4 shadow-[0_14px_36px_rgba(0,0,0,0.16)]">
+            <h3 className="text-sm font-semibold text-[var(--foreground)]">上下文视图</h3>
+            <p className="mt-1 text-xs text-[var(--foreground-dim)]">{effectiveContextCitation.path.join(" > ")}</p>
+            <p className="mt-3 rounded-md border border-[color:rgba(234,179,8,0.16)] bg-[color:rgba(234,179,8,0.1)] px-3 py-2 text-sm text-[#fde68a]">
               {effectiveContextCitation.text}
             </p>
           </section>

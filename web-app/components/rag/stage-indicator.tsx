@@ -13,11 +13,11 @@ const stageLabel: Record<RagStage, string> = {
 };
 
 const stageTone: Record<RagStage, string> = {
-  analyzing: "border-cyan-300/50 bg-cyan-400/12 text-cyan-100",
-  rewriting: "border-sky-300/45 bg-sky-400/12 text-sky-100",
-  retrieving_summary: "border-amber-300/50 bg-amber-400/15 text-amber-100",
-  retrieving_paragraphs: "border-emerald-300/45 bg-emerald-400/15 text-emerald-100",
-  generating: "border-violet-300/45 bg-violet-400/15 text-violet-100",
+  analyzing: "border-[color:rgba(99,102,241,0.18)] bg-[var(--accent-subtle)] text-[var(--accent-hover)]",
+  rewriting: "border-[color:rgba(99,102,241,0.18)] bg-[var(--accent-subtle)] text-[var(--accent-hover)]",
+  retrieving_summary: "border-[color:rgba(234,179,8,0.16)] bg-[color:rgba(234,179,8,0.1)] text-[#fde047]",
+  retrieving_paragraphs: "border-[color:rgba(34,197,94,0.16)] bg-[color:rgba(34,197,94,0.1)] text-[#86efac]",
+  generating: "border-[color:rgba(99,102,241,0.18)] bg-[var(--accent-subtle)] text-[var(--accent-hover)]",
 };
 
 interface StageIndicatorProps {
@@ -31,7 +31,7 @@ export function StageIndicator({ stage }: StageIndicatorProps) {
 
   return (
     <div
-      className={`animate-cascade inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs shadow-[0_0_18px_rgba(0,212,255,0.18)] ${stageTone[stage]}`}
+      className={`animate-cascade inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs shadow-[0_10px_20px_rgba(0,0,0,0.14)] ${stageTone[stage]}`}
     >
       <Loader2 className="h-3.5 w-3.5 animate-spin" />
       <span>{stageLabel[stage]}</span>

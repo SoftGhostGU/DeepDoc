@@ -41,22 +41,22 @@ export function ChatMessage({
     >
       <div
         className={cn(
-          "max-w-[90%] rounded-xl px-4 py-3 text-sm shadow-[0_12px_26px_rgba(2,8,23,0.34)]",
+          "max-w-[90%] rounded-xl px-4 py-3 text-sm shadow-[0_10px_24px_rgba(0,0,0,0.16)]",
           isUser
-            ? "border border-cyan-200/30 bg-cyan-400/88 text-slate-950"
-            : "border border-slate-700 bg-[#102541] text-slate-100",
+            ? "border border-[color:rgba(99,102,241,0.22)] bg-[linear-gradient(180deg,var(--accent),var(--accent-muted))] text-white"
+            : "border border-[var(--border-subtle)] bg-[var(--surface-raised)] text-[var(--foreground)]",
         )}
       >
         {isUser ? (
           <p className="whitespace-pre-wrap leading-relaxed">{message.content}</p>
         ) : (
           <div className="space-y-2">
-            <div className="max-w-none text-sm leading-relaxed text-slate-100 [&_a]:text-cyan-200 [&_blockquote]:border-l-cyan-300/50 [&_blockquote]:text-slate-300 [&_code]:text-cyan-100">
+            <div className="max-w-none text-sm leading-relaxed text-[var(--foreground)] [&_a]:text-[var(--accent-hover)] [&_blockquote]:border-l-[var(--accent)] [&_blockquote]:text-[var(--foreground-muted)] [&_code]:text-[var(--accent-hover)]">
               <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content}</ReactMarkdown>
             </div>
 
             {inlineCitations.length > 0 && (
-              <div className="flex flex-wrap items-center gap-1 text-xs text-slate-400">
+              <div className="flex flex-wrap items-center gap-1 text-xs text-[var(--foreground-dim)]">
                 <span>行内引用：</span>
                 {inlineCitations.map((citation) => (
                   <CitationMarker

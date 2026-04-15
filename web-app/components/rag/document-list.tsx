@@ -98,14 +98,14 @@ export function DocumentList({ documents, compact = false, onDeleted }: Document
           <Card
             key={document.id}
             className={cn(
-              "animate-fade-in-up hover:-translate-y-0.5 hover:border-cyan-300/45 hover:shadow-[0_22px_45px_rgba(2,8,23,0.45),0_0_24px_rgba(0,212,255,0.16)]",
+              "animate-fade-in-up hover:-translate-y-0.5 hover:border-[var(--border)] hover:shadow-[0_18px_38px_rgba(0,0,0,0.18)]",
               compact && "p-0",
             )}
             style={{ animationDelay: `${Math.min(index * 50, 400)}ms` }}
           >
             <CardHeader className={compact ? "space-y-2 p-3" : "space-y-2"}>
               <div className="flex items-start justify-between gap-2">
-                <CardTitle className={cn(compact ? "text-sm" : "text-base", "text-slate-100")}>
+                <CardTitle className={cn(compact ? "text-sm" : "text-base", "text-[var(--foreground)]")}>
                   {document.originalName}
                 </CardTitle>
                 <Badge variant={statusToBadgeVariant[document.status]}>
@@ -113,7 +113,7 @@ export function DocumentList({ documents, compact = false, onDeleted }: Document
                 </Badge>
               </div>
               {!compact && (
-                <CardDescription className="text-slate-400">
+                <CardDescription className="text-[var(--foreground-dim)]">
                   {formatSize(document.size)} • 上传于 {formatDate(document.createdAt)}
                 </CardDescription>
               )}
@@ -132,7 +132,7 @@ export function DocumentList({ documents, compact = false, onDeleted }: Document
               <Button
                 size="sm"
                 variant="ghost"
-                className="text-rose-300 hover:bg-rose-500/20 hover:text-rose-200"
+                className="text-[#fca5a5] hover:bg-[color:rgba(239,68,68,0.12)] hover:text-[#fecaca]"
                 onClick={() => setDeleteTarget(document)}
                 aria-label={`删除文档 ${document.originalName}`}
                 title={`删除文档 ${document.originalName}`}
