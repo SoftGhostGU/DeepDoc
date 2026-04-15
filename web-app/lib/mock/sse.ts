@@ -39,7 +39,7 @@ export function createMockChatStream(options?: {
           event: "stage",
           data: {
             stage: "analyzing",
-            message: "Analyzing query intent...",
+            message: "正在分析查询意图...",
           },
         } satisfies AskSseEvent);
 
@@ -48,7 +48,7 @@ export function createMockChatStream(options?: {
           event: "stage",
           data: {
             stage: "rewriting",
-            message: "Rewriting query for better retrieval...",
+            message: "正在改写查询...",
           },
         } satisfies AskSseEvent);
 
@@ -57,7 +57,7 @@ export function createMockChatStream(options?: {
           event: "stage",
           data: {
             stage: "retrieving_summary",
-            message: "Retrieving relevant sections...",
+            message: "正在检索摘要候选...",
           },
         } satisfies AskSseEvent);
 
@@ -73,7 +73,7 @@ export function createMockChatStream(options?: {
           event: "stage",
           data: {
             stage: "retrieving_paragraphs",
-            message: "Refining to paragraph-level evidence...",
+            message: "正在检索源段落...",
           },
         } satisfies AskSseEvent);
 
@@ -88,12 +88,12 @@ export function createMockChatStream(options?: {
           event: "stage",
           data: {
             stage: "generating",
-            message: "Generating final answer...",
+            message: "正在生成回答...",
           },
         } satisfies AskSseEvent);
 
         const answer = question
-          ? `${mockAnswerText}\n\nQuestion focus: ${question}`
+          ? `${mockAnswerText}\n\n问题重点：${question}`
           : mockAnswerText;
 
         for (const token of answer.split(" ")) {
@@ -152,15 +152,15 @@ export function createMockCompareStream(options?: {
           event: "stage",
           data: {
             stage: "analyzing",
-            message: "Preparing comparison query...",
+            message: "正在准备对比查询...",
           },
         } satisfies CompareSseEvent);
 
         const naiveAnswer = question
-          ? `${mockCompareAnswerNaive} (Query: ${question})`
+          ? `${mockCompareAnswerNaive}（问题：${question}）`
           : mockCompareAnswerNaive;
         const hierarchicalAnswer = question
-          ? `${mockCompareAnswerHierarchical} (Query: ${question})`
+          ? `${mockCompareAnswerHierarchical}（问题：${question}）`
           : mockCompareAnswerHierarchical;
 
         for (const token of naiveAnswer.split(" ")) {
@@ -210,7 +210,7 @@ export function createMockCompareStream(options?: {
         await emit(controller, "final", {
           event: "final",
           data: {
-            answer: "Comparison finished",
+            answer: "对比完成",
             citations: mockCitations,
           },
         } satisfies CompareSseEvent);
