@@ -11,7 +11,7 @@ import type { ChatMessage as ChatMessageType, Citation } from "@/types";
 interface ChatMessageProps {
   message: ChatMessageType;
   selectedCitationId?: number;
-  onCitationClick?: (citation: Citation) => void;
+  onCitationClick?: (messageId: string, citation: Citation) => void;
 }
 
 export function ChatMessage({
@@ -56,13 +56,14 @@ export function ChatMessage({
                     key={citation.id}
                     citation={citation}
                     selected={selectedCitationId === citation.id}
-                    onClick={onCitationClick}
+                    onClick={(citation) => onCitationClick?.(message.id, citation)}
                   />
                 ))}
               </div>
             )}
 
             <CitationSummaryFooter
+              messageId={message.id}
               citations={citations}
               selectedCitationId={selectedCitationId}
               onCitationClick={onCitationClick}

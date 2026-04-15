@@ -9,12 +9,14 @@ import { cn } from "@/lib/utils";
 import type { Citation } from "@/types";
 
 interface CitationSummaryFooterProps {
+  messageId: string;
   citations: Citation[];
   selectedCitationId?: number;
-  onCitationClick?: (citation: Citation) => void;
+  onCitationClick?: (messageId: string, citation: Citation) => void;
 }
 
 export function CitationSummaryFooter({
+  messageId,
   citations,
   selectedCitationId,
   onCitationClick,
@@ -43,7 +45,7 @@ export function CitationSummaryFooter({
               key={citation.id}
               citation={citation}
               selected={selectedCitationId === citation.id}
-              onClick={onCitationClick}
+              onClick={(selected) => onCitationClick?.(messageId, selected)}
             />
           ))}
         </div>

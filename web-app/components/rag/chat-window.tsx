@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useShallow } from "zustand/react/shallow";
 
 import { ChatInput } from "@/components/rag/chat-input";
 import { ChatMessage } from "@/components/rag/chat-message";
@@ -18,6 +19,7 @@ interface ChatWindowProps {
 
 export function ChatWindow({ documentId, sessionId }: ChatWindowProps) {
   const bottomRef = useRef<HTMLDivElement | null>(null);
+  const [selectedMessageId, setSelectedMessageId] = useState<string | null>(null);
   const [selectedCitation, setSelectedCitation] = useState<Citation | null>(null);
   const [contextCitation, setContextCitation] = useState<Citation | null>(null);
 
@@ -28,39 +30,56 @@ export function ChatWindow({ documentId, sessionId }: ChatWindowProps) {
     streamError,
     clearError,
     sendMessage,
-  } = useChatStore((state) => ({
+  } = useChatStore(useShallow((state) => ({
     messagesBySession: state.messagesBySession,
     isStreaming: state.isStreaming,
     currentStage: state.currentStage,
     streamError: state.streamError,
     clearError: state.clearError,
     sendMessage: state.sendMessage,
-  }));
+  })));
 
   const messages = useMemo(
     () => (sessionId ? messagesBySession[sessionId] ?? [] : []),
     [messagesBySession, sessionId],
   );
 
-  const latestCitations = useMemo(() => {
-    const latestAssistantWithCitations = [...messages]
+  const latestAssistantWithCitations = useMemo(() => {
+    return [...messages]
       .reverse()
       .find((message) => message.role === "ASSISTANT" && (message.citations?.length ?? 0) > 0);
-
-    return latestAssistantWithCitations?.citations ?? [];
   }, [messages]);
+
+  const selectedMessageWithCitations = useMemo(() => {
+    if (selectedMessageId) {
+      const selectedMessage = messages.find(
+        (message) =>
+          message.id === selectedMessageId &&
+          message.role === "ASSISTANT" &&
+          (message.citations?.length ?? 0) > 0,
+      );
+
+      if (selectedMessage) {
+        return selectedMessage;
+      }
+    }
+
+    return latestAssistantWithCitations ?? null;
+  }, [latestAssistantWithCitations, messages, selectedMessageId]);
+
+  const panelCitations = selectedMessageWithCitations?.citations ?? [];
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isStreaming, currentStage]);
 
   const effectiveSelectedCitation =
-    selectedCitation && latestCitations.some((citation) => citation.id === selectedCitation.id)
+    selectedCitation && panelCitations.some((citation) => citation.id === selectedCitation.id)
       ? selectedCitation
       : null;
 
   const effectiveContextCitation =
-    contextCitation && latestCitations.some((citation) => citation.id === contextCitation.id)
+    contextCitation && panelCitations.some((citation) => citation.id === contextCitation.id)
       ? contextCitation
       : null;
 
@@ -85,7 +104,8 @@ export function ChatWindow({ documentId, sessionId }: ChatWindowProps) {
                 key={message.id}
                 message={message}
                 selectedCitationId={effectiveSelectedCitation?.id}
-                onCitationClick={(citation) => {
+                onCitationClick={(messageId, citation) => {
+                  setSelectedMessageId(messageId);
                   setSelectedCitation(citation);
                   setContextCitation(null);
                 }}
@@ -118,7 +138,7 @@ export function ChatWindow({ documentId, sessionId }: ChatWindowProps) {
 
       <div className="flex min-h-0 flex-col gap-3">
         <CitationPanel
-          citations={latestCitations}
+          citations={panelCitations}
           selectedId={effectiveSelectedCitation?.id}
           onSelect={(citation) => {
             setSelectedCitation(citation);

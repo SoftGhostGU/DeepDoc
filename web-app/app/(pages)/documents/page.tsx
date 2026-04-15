@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { useShallow } from "zustand/react/shallow";
 
 import { EmptyState } from "@/components/rag/empty-state";
 import { DocumentList } from "@/components/rag/document-list";
@@ -9,14 +10,14 @@ import { useDocumentStore } from "@/lib/stores/document-store";
 
 export default function DocumentsPage() {
   const { documents, isLoading, error, fetchDocuments, addDocument, removeDocument } =
-    useDocumentStore((state) => ({
+    useDocumentStore(useShallow((state) => ({
       documents: state.documents,
       isLoading: state.isLoading,
       error: state.error,
       fetchDocuments: state.fetchDocuments,
       addDocument: state.addDocument,
       removeDocument: state.removeDocument,
-    }));
+    })));
 
   useEffect(() => {
     void fetchDocuments();

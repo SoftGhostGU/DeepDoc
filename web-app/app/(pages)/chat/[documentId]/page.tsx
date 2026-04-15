@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo } from "react";
 import { useParams } from "next/navigation";
+import { useShallow } from "zustand/react/shallow";
 
 import { ChatWindow } from "@/components/rag/chat-window";
 import { SessionSidebar } from "@/components/rag/session-sidebar";
@@ -12,10 +13,12 @@ export default function ChatDocumentPage() {
   const params = useParams<{ documentId: string }>();
   const documentId = params.documentId;
 
-  const { documents, fetchDocuments } = useDocumentStore((state) => ({
-    documents: state.documents,
-    fetchDocuments: state.fetchDocuments,
-  }));
+  const { documents, fetchDocuments } = useDocumentStore(
+    useShallow((state) => ({
+      documents: state.documents,
+      fetchDocuments: state.fetchDocuments,
+    })),
+  );
 
   const {
     sessionsByDocument,
@@ -23,13 +26,13 @@ export default function ChatDocumentPage() {
     loadHistory,
     createSession,
     setActiveSession,
-  } = useChatStore((state) => ({
+  } = useChatStore(useShallow((state) => ({
     sessionsByDocument: state.sessionsByDocument,
     activeSessionIdByDocument: state.activeSessionIdByDocument,
     loadHistory: state.loadHistory,
     createSession: state.createSession,
     setActiveSession: state.setActiveSession,
-  }));
+  })));
 
   const sessions = useMemo(
     () => sessionsByDocument[documentId] ?? [],
