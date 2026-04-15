@@ -23,10 +23,10 @@ export function SessionSidebar({
   return (
     <aside className="flex h-full w-full max-w-xs flex-col rounded-xl border border-slate-200 bg-white p-3">
       <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-slate-900">Chat sessions</h2>
+        <h2 className="text-sm font-semibold text-slate-900">对话记录</h2>
         <Button size="sm" variant="outline" onClick={onCreateSession}>
           <MessageSquarePlus className="h-4 w-4" />
-          New
+          新建
         </Button>
       </div>
 
@@ -34,7 +34,7 @@ export function SessionSidebar({
         <div className="space-y-2">
           {sessions.length === 0 && (
             <p className="rounded-md border border-dashed border-slate-200 p-3 text-xs text-slate-500">
-              No chat sessions yet.
+              暂无对话记录
             </p>
           )}
 
@@ -50,7 +50,7 @@ export function SessionSidebar({
                   : "border-slate-200 bg-white text-slate-700 hover:border-slate-400",
               )}
             >
-              <p className="line-clamp-1 text-sm font-medium">{session.title || "Untitled"}</p>
+              <p className="line-clamp-1 text-sm font-medium">{session.title || "未命名对话"}</p>
               <p className="mt-1 text-xs opacity-80">
                 {new Date(session.updatedAt).toLocaleString()}
               </p>

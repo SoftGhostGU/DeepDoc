@@ -35,7 +35,7 @@ export function CitationSummaryFooter({
         className="h-auto w-full justify-between px-2 py-1 text-xs"
         onClick={() => setOpen((prev) => !prev)}
       >
-        <span>Based on {citations.length} sources</span>
+        <span>基于 {citations.length} 个来源</span>
         <ChevronDown className={cn("h-3.5 w-3.5 transition", open && "rotate-180")} />
       </Button>
       {open && (

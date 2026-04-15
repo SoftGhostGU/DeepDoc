@@ -8,12 +8,12 @@ export function EmptyState() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
           <FileText className="h-4 w-4" />
-          No documents yet
+          暂无文档
         </CardTitle>
       </CardHeader>
       <CardContent>
         <p className="text-sm text-slate-600">
-          Upload your first PDF, Markdown, or TXT file to start asking questions.
+          上传您的第一个 PDF、Markdown 或文本文件，开始智能问答
         </p>
       </CardContent>
     </Card>

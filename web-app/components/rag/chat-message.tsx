@@ -50,7 +50,7 @@ export function ChatMessage({
 
             {inlineCitations.length > 0 && (
               <div className="flex flex-wrap items-center gap-1 text-xs text-slate-500">
-                <span>Inline citations:</span>
+                <span>行内引用：</span>
                 {inlineCitations.map((citation) => (
                   <CitationMarker
                     key={citation.id}

@@ -31,10 +31,10 @@ const statusToBadgeVariant: Record<Document["status"], "secondary" | "warning" |
 };
 
 const statusLabel: Record<Document["status"], string> = {
-  UPLOADING: "Uploading",
-  PARSING: "Parsing",
-  INDEXED: "Indexed",
-  FAILED: "Failed",
+  UPLOADING: "上传中",
+  PARSING: "解析中",
+  INDEXED: "已索引",
+  FAILED: "失败",
 };
 
 function formatDate(isoString: string) {
@@ -103,7 +103,7 @@ export function DocumentList({ documents, compact = false, onDeleted }: Document
               </div>
               {!compact && (
                 <CardDescription>
-                  {formatSize(document.size)} • Uploaded {formatDate(document.createdAt)}
+                  {formatSize(document.size)} • 上传于 {formatDate(document.createdAt)}
                 </CardDescription>
               )}
             </CardHeader>
@@ -114,7 +114,7 @@ export function DocumentList({ documents, compact = false, onDeleted }: Document
                 disabled={document.status !== "INDEXED"}
                 onClick={() => router.push(`/chat/${document.id}`)}
               >
-                Open chat
+                打开问答
                 <ArrowRight className="h-4 w-4" />
               </Button>
 
@@ -134,17 +134,17 @@ export function DocumentList({ documents, compact = false, onDeleted }: Document
       <Dialog open={Boolean(deleteTarget)} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Delete document?</DialogTitle>
+            <DialogTitle>删除文档？</DialogTitle>
             <DialogDescription>
-              This will remove the document metadata, its chat sessions, and the uploaded file.
+              将删除文档元数据、相关对话记录和已上传文件。
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="secondary" onClick={() => setDeleteTarget(null)}>
-              Cancel
+              取消
             </Button>
             <Button variant="destructive" onClick={handleDelete} disabled={deleting}>
-              {deleting ? "Deleting..." : "Delete"}
+              {deleting ? "删除中..." : "删除"}
             </Button>
           </DialogFooter>
         </DialogContent>

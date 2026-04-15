@@ -87,7 +87,7 @@ export function ChatWindow({ documentId, sessionId }: ChatWindowProps) {
     <div className="grid h-full min-h-[70vh] gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">
       <div className="flex min-h-0 flex-col gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
         <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-slate-800">Conversation</h2>
+          <h2 className="text-sm font-semibold text-slate-800">对话</h2>
           <StageIndicator stage={currentStage} />
         </div>
 
@@ -95,7 +95,7 @@ export function ChatWindow({ documentId, sessionId }: ChatWindowProps) {
           <div className="space-y-3">
             {messages.length === 0 && (
               <p className="rounded-lg border border-dashed border-slate-200 bg-slate-50 p-4 text-sm text-slate-500">
-                Start by asking a question about this document.
+                向文档提问，开始智能问答吧
               </p>
             )}
 
@@ -119,7 +119,7 @@ export function ChatWindow({ documentId, sessionId }: ChatWindowProps) {
           <div className="flex items-center justify-between rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
             <span>{streamError}</span>
             <Button size="sm" variant="ghost" onClick={clearError}>
-              Dismiss
+              关闭
             </Button>
           </div>
         )}
@@ -152,7 +152,7 @@ export function ChatWindow({ documentId, sessionId }: ChatWindowProps) {
 
         {effectiveContextCitation && (
           <section className="rounded-xl border border-slate-200 bg-white p-4">
-            <h3 className="text-sm font-semibold text-slate-900">Context view</h3>
+            <h3 className="text-sm font-semibold text-slate-900">上下文视图</h3>
             <p className="mt-1 text-xs text-slate-500">{effectiveContextCitation.path.join(" > ")}</p>
             <p className="mt-3 rounded-md bg-amber-50 px-3 py-2 text-sm text-slate-800">
               {effectiveContextCitation.text}

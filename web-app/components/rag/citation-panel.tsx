@@ -38,13 +38,13 @@ export function CitationPanel({
   return (
     <Card className="h-full">
       <CardHeader className="pb-3">
-        <CardTitle className="text-base">Citations</CardTitle>
+        <CardTitle className="text-base">引用来源</CardTitle>
       </CardHeader>
       <CardContent className="p-0">
         <ScrollArea className="h-[420px] px-4 pb-4">
           <div className="space-y-3">
             {citations.length === 0 && (
-              <p className="text-sm text-slate-500">No citations for this message yet.</p>
+              <p className="text-sm text-slate-500">暂无引用</p>
             )}
             {citations.map((citation) => (
               <article
@@ -65,7 +65,7 @@ export function CitationPanel({
                   className="mb-2 flex w-full items-center justify-between text-left"
                 >
                   <span className="text-sm font-semibold text-slate-900">[{citation.id}]</span>
-                  <span className="text-xs text-slate-500">Score {(citation.score * 100).toFixed(0)}%</span>
+                  <span className="text-xs text-slate-500">相关度 {(citation.score * 100).toFixed(0)}%</span>
                 </button>
 
                 <p className="line-clamp-4 text-sm text-slate-700">{citation.text}</p>
@@ -78,7 +78,7 @@ export function CitationPanel({
                   onClick={() => onViewContext?.(citation)}
                 >
                   <ExternalLink className="h-3.5 w-3.5" />
-                  View in context
+                  查看上下文
                 </Button>
               </article>
             ))}

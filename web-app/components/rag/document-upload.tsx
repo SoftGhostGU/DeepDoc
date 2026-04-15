@@ -34,13 +34,13 @@ function formatFileSize(sizeInBytes: number) {
 function validateFile(file: File) {
   const extension = file.name.slice(file.name.lastIndexOf(".")).toLowerCase();
   if (!ACCEPTED_EXTENSIONS.includes(extension)) {
-    return "Unsupported file type. Supported types: PDF, MD, TXT.";
+    return "不支持的文件类型，支持格式：PDF、MD、TXT";
   }
 
   if (file.size > MAX_FILE_SIZE_BYTES) {
-    return `File is too large (${formatFileSize(file.size)}). Max size is ${formatFileSize(
+    return `文件过大（${formatFileSize(file.size)}），最大支持 ${formatFileSize(
       MAX_FILE_SIZE_BYTES,
-    )}.`;
+    )}`;
   }
 
   return null;
@@ -56,7 +56,7 @@ export function DocumentUpload({ compact = false, onUploaded }: DocumentUploadPr
 
   const helperText = useMemo(() => {
     if (!selectedFile) {
-      return "Drop a file here, or browse from your computer.";
+      return "将文件拖到此处，或从电脑中选择";
     }
 
     return `${selectedFile.name} (${formatFileSize(selectedFile.size)})`;
@@ -132,10 +132,10 @@ export function DocumentUpload({ compact = false, onUploaded }: DocumentUploadPr
   return (
     <Card>
       <CardHeader className={compact ? "pb-3" : ""}>
-        <CardTitle className="text-base">Upload document</CardTitle>
+        <CardTitle className="text-base">上传文档</CardTitle>
         {!compact && (
           <CardDescription>
-            Supports PDF, Markdown, and text files up to {formatFileSize(MAX_FILE_SIZE_BYTES)}.
+            支持 PDF、Markdown 和文本文件，最大 {formatFileSize(MAX_FILE_SIZE_BYTES)}
           </CardDescription>
         )}
       </CardHeader>
@@ -175,7 +175,7 @@ export function DocumentUpload({ compact = false, onUploaded }: DocumentUploadPr
               <Upload className="h-4 w-4" />
             </div>
             <div className="min-w-0">
-              <p className="text-sm font-medium text-slate-900">Drag and drop a file</p>
+              <p className="text-sm font-medium text-slate-900">拖拽文件到此处</p>
               <p className="text-xs text-slate-500">{helperText}</p>
             </div>
           </div>
@@ -189,7 +189,7 @@ export function DocumentUpload({ compact = false, onUploaded }: DocumentUploadPr
                 style={{ width: `${progress}%` }}
               />
             </div>
-            <p className="text-xs text-slate-500">Uploading... {progress}%</p>
+            <p className="text-xs text-slate-500">上传中... {progress}%</p>
           </div>
         )}
 
@@ -199,12 +199,12 @@ export function DocumentUpload({ compact = false, onUploaded }: DocumentUploadPr
           {isUploading ? (
             <>
               <Loader2 className="h-4 w-4 animate-spin" />
-              Uploading...
+              上传中...
             </>
           ) : (
             <>
               <FileUp className="h-4 w-4" />
-              Upload file
+              上传文件
             </>
           )}
         </Button>

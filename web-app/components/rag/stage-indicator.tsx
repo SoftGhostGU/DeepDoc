@@ -5,11 +5,11 @@ import { Loader2 } from "lucide-react";
 import type { RagStage } from "@/types/rag";
 
 const stageLabel: Record<RagStage, string> = {
-  analyzing: "Analyzing query...",
-  rewriting: "Rewriting query...",
-  retrieving_summary: "Retrieving summary candidates...",
-  retrieving_paragraphs: "Retrieving source paragraphs...",
-  generating: "Generating answer...",
+  analyzing: "分析查询意图...",
+  rewriting: "改写查询...",
+  retrieving_summary: "检索摘要候选...",
+  retrieving_paragraphs: "检索源段落...",
+  generating: "生成回答...",
 };
 
 interface StageIndicatorProps {

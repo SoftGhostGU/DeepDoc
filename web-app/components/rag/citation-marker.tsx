@@ -21,7 +21,7 @@ export function CitationMarker({ citation, selected = false, onClick }: Citation
           : "border-slate-300 bg-slate-100 text-slate-700 hover:border-slate-500",
       )}
       title={citation.path.join(" > ")}
-      aria-label={`Open citation ${citation.id}`}
+      aria-label={`查看引用 ${citation.id}`}
     >
       {citation.id}
     </button>
