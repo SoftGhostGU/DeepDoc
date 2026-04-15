@@ -158,9 +158,12 @@ class TextParser(ParsingStrategy):
             return []
 
         # 创建一个默认章节包含所有段落
+        section_id = "sec_1"
+        for para in paragraphs:
+            para.section_id = section_id
         return [
             Section(
-                id="sec_1",
+                id=section_id,
                 title="Document",
                 level=1,
                 paragraphs=paragraphs[:],

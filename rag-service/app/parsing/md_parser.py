@@ -184,6 +184,7 @@ class MarkdownParser(ParsingStrategy):
                 if i <= para.position:
                     section_idx = i
             if section_idx >= 0:
+                para.section_id = sections[section_idx].id
                 sections[section_idx].paragraphs.append(para)
 
         # Set parent relationships

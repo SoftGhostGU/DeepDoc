@@ -14,5 +14,6 @@ __pycache__/
 .env.local
 .DS_Store
 
-# logs
+# others
 logs/
+uploads/
