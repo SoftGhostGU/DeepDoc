@@ -4,7 +4,7 @@ import { useMemo, useRef, useState } from "react";
 import { Upload, FileUp, Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
 import type { Document } from "@/types";
 
 const MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024;
@@ -130,9 +130,9 @@ export function DocumentUpload({ compact = false, onUploaded }: DocumentUploadPr
   };
 
   return (
-    <Card>
+    <Card className="border-slate-700/70 bg-[#0f1d32]/92">
       <CardHeader className={compact ? "pb-3" : ""}>
-        <CardTitle className="text-base">上传文档</CardTitle>
+        <h2 className="text-base font-semibold tracking-wide text-cyan-100">上传文档</h2>
         {!compact && (
           <CardDescription>
             支持 PDF、Markdown 和文本文件，最大 {formatFileSize(MAX_FILE_SIZE_BYTES)}
@@ -164,36 +164,36 @@ export function DocumentUpload({ compact = false, onUploaded }: DocumentUploadPr
             setIsDragging(false);
             onFilePicked(event.dataTransfer.files?.[0] ?? null);
           }}
-          className={`w-full rounded-lg border border-dashed px-4 py-6 text-left transition ${
+          className={`w-full rounded-lg border border-dashed px-4 py-6 text-left transition-[border-color,background-color,box-shadow] duration-200 ${
             isDragging
-              ? "border-slate-900 bg-slate-50"
-              : "border-slate-300 hover:border-slate-400"
+              ? "border-cyan-300/70 bg-cyan-400/10 shadow-[0_0_24px_rgba(0,212,255,0.22)]"
+              : "border-slate-600 bg-[#0b1a2f]/75 hover:border-cyan-300/45"
           }`}
         >
           <div className="flex items-start gap-3">
-            <div className="rounded-md bg-slate-100 p-2 text-slate-700">
+            <div className="rounded-md border border-cyan-300/20 bg-cyan-400/12 p-2 text-cyan-100">
               <Upload className="h-4 w-4" />
             </div>
             <div className="min-w-0">
-              <p className="text-sm font-medium text-slate-900">拖拽文件到此处</p>
-              <p className="text-xs text-slate-500">{helperText}</p>
+              <p className="text-sm font-medium text-slate-100">拖拽文件到此处</p>
+              <p className="text-xs text-slate-400">{helperText}</p>
             </div>
           </div>
         </button>
 
         {progress > 0 && isUploading && (
           <div className="space-y-1">
-            <div className="h-2 rounded-full bg-slate-100">
+            <div className="h-2 rounded-full bg-slate-800">
               <div
-                className="h-2 rounded-full bg-slate-900 transition-all"
+                className="animate-shimmer h-2 rounded-full bg-[linear-gradient(90deg,rgba(34,211,238,0.55),rgba(125,211,252,0.95),rgba(34,211,238,0.55))] transition-all"
                 style={{ width: `${progress}%` }}
               />
             </div>
-            <p className="text-xs text-slate-500">上传中... {progress}%</p>
+            <p className="font-mono text-xs text-cyan-200">上传中... {progress}%</p>
           </div>
         )}
 
-        {error && <p className="text-xs text-rose-600">{error}</p>}
+        {error && <p className="text-xs text-rose-300">{error}</p>}
 
         <Button onClick={upload} disabled={!selectedFile || isUploading} className="w-full">
           {isUploading ? (

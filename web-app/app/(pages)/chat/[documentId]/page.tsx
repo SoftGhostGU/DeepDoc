@@ -63,10 +63,10 @@ export default function ChatDocumentPage() {
   }, [activeSessionId, createSession, documentId, sessions, setActiveSession]);
 
   return (
-    <section className="flex h-full min-h-[70vh] flex-col gap-4">
+    <section className="animate-fade-in-up flex h-full min-h-[70vh] flex-col gap-4">
       <header>
-        <h1 className="text-2xl font-semibold text-slate-900">问答工作区</h1>
-        <p className="mt-1 text-sm text-slate-600">
+        <h1 className="text-2xl font-semibold text-cyan-100">问答工作区</h1>
+        <p className="mt-1 text-sm text-slate-300">
           文档：{currentDocument?.originalName ?? documentId}
         </p>
       </header>

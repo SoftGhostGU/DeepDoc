@@ -1,7 +1,9 @@
-## ADDED Requirements
+## MODIFIED Requirements
 
 ### Requirement: HTML 语言属性和 Metadata 为中文
 `layout.tsx` 的 `<html lang>` SHALL 为 `zh-CN`，metadata 的 title SHALL 为 "DeepDoc"，description SHALL 为中文描述。
+
+**Modification**: Update to ensure Chinese text renders optimally with new Space Grotesk + Chinese fallback font stack.
 
 #### Scenario: 页面语言标记
 - **WHEN** 浏览器加载页面
@@ -15,6 +17,8 @@
 
 ### Requirement: 文档管理页面文本汉化
 文档管理相关的所有用户可见文本 SHALL 为中文。
+
+**Modification**: Ensure Chinese text maintains excellent readability with deep-sea theme colors and new typography.
 
 #### Scenario: 页面标题和描述
 - **WHEN** 用户打开文档管理页面
@@ -50,6 +54,8 @@
 ### Requirement: 问答界面文本汉化
 问答界面所有用户可见文本 SHALL 为中文。
 
+**Modification**: Ensure Chinese chat interface is readable and aesthetically pleasing in dark theme.
+
 #### Scenario: 对话标题
 - **WHEN** 用户在问答页面
 - **THEN** 标题 SHALL 显示"问答工作区"，文档名行 SHALL 为"文档：xxx"
@@ -77,6 +83,8 @@
 
 ### Requirement: 引用面板文本汉化
 引用相关的所有用户可见文本 SHALL 为中文。
+
+**Modification**: Ensure citation panel Chinese text works with new glow effects and card styling.
 
 #### Scenario: 面板标题
 - **WHEN** 查看引用面板
@@ -116,6 +124,8 @@
 ### Requirement: 会话侧边栏文本汉化
 会话管理相关文本 SHALL 为中文。
 
+**Modification**: Ensure session sidebar Chinese text is legible in narrow dark sidebar.
+
 #### Scenario: 侧边栏标题
 - **WHEN** 查看会话侧边栏
 - **THEN** 标题 SHALL 为"对话记录"
@@ -128,6 +138,8 @@
 
 ### Requirement: 导航侧边栏文本汉化
 应用导航侧边栏文本 SHALL 为中文。
+
+**Modification**: Ensure navigation sidebar works with new dark theme.
 
 #### Scenario: 文档链接
 - **WHEN** 查看侧边栏导航
@@ -142,6 +154,8 @@
 ### Requirement: Stage indicator 文本汉化
 RAG 处理阶段的状态提示文本 SHALL 为中文。
 
+**Modification**: Ensure stage indicator Chinese text works with flowing animation.
+
 #### Scenario: 各阶段提示
 - **WHEN** SSE 流式处理中
 - **THEN** 阶段提示 SHALL 为中文：分析查询意图...、改写查询...、检索摘要候选...、检索源段落...、生成回答...
@@ -150,6 +164,8 @@ RAG 处理阶段的状态提示文本 SHALL 为中文。
 
 ### Requirement: Mock 数据汉化
 Mock 数据中的示例文本 SHALL 为中文，以便演示效果更贴合场景。
+
+**Modification**: Ensure mock Chinese data looks good with new monospace fonts.
 
 #### Scenario: Mock 文档树
 - **WHEN** 查看 Mock 模式下的文档结构

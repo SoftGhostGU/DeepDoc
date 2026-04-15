@@ -33,23 +33,30 @@ export function ChatMessage({
   const inlineCitations = citations.filter((citation) => inTextCitationIds.includes(citation.id));
 
   return (
-    <article className={cn("flex", isUser ? "justify-end" : "justify-start")}>
+    <article
+      className={cn(
+        "flex",
+        isUser ? "justify-end animate-slide-in-right" : "justify-start animate-slide-in-left",
+      )}
+    >
       <div
         className={cn(
-          "max-w-[90%] rounded-xl px-4 py-3 text-sm",
-          isUser ? "bg-slate-900 text-white" : "border border-slate-200 bg-white text-slate-900",
+          "max-w-[90%] rounded-xl px-4 py-3 text-sm shadow-[0_12px_26px_rgba(2,8,23,0.34)]",
+          isUser
+            ? "border border-cyan-200/30 bg-cyan-400/88 text-slate-950"
+            : "border border-slate-700 bg-[#102541] text-slate-100",
         )}
       >
         {isUser ? (
           <p className="whitespace-pre-wrap leading-relaxed">{message.content}</p>
         ) : (
           <div className="space-y-2">
-            <div className="prose prose-slate max-w-none text-sm leading-relaxed">
+            <div className="max-w-none text-sm leading-relaxed text-slate-100 [&_a]:text-cyan-200 [&_blockquote]:border-l-cyan-300/50 [&_blockquote]:text-slate-300 [&_code]:text-cyan-100">
               <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content}</ReactMarkdown>
             </div>
 
             {inlineCitations.length > 0 && (
-              <div className="flex flex-wrap items-center gap-1 text-xs text-slate-500">
+              <div className="flex flex-wrap items-center gap-1 text-xs text-slate-400">
                 <span>行内引用：</span>
                 {inlineCitations.map((citation) => (
                   <CitationMarker

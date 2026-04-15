@@ -15,6 +15,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 import type { Document } from "@/types";
 
 interface DocumentListProps {
@@ -23,8 +24,11 @@ interface DocumentListProps {
   onDeleted?: (id: string) => void;
 }
 
-const statusToBadgeVariant: Record<Document["status"], "secondary" | "warning" | "success" | "danger"> = {
-  UPLOADING: "secondary",
+const statusToBadgeVariant: Record<
+  Document["status"],
+  "default" | "secondary" | "warning" | "success" | "danger"
+> = {
+  UPLOADING: "default",
   PARSING: "warning",
   INDEXED: "success",
   FAILED: "danger",
@@ -90,11 +94,18 @@ export function DocumentList({ documents, compact = false, onDeleted }: Document
   return (
     <>
       <div className={compact ? "space-y-2" : "grid gap-3 sm:grid-cols-2 xl:grid-cols-3"}>
-        {sorted.map((document) => (
-          <Card key={document.id} className={compact ? "p-0" : ""}>
+        {sorted.map((document, index) => (
+          <Card
+            key={document.id}
+            className={cn(
+              "animate-fade-in-up hover:-translate-y-0.5 hover:border-cyan-300/45 hover:shadow-[0_22px_45px_rgba(2,8,23,0.45),0_0_24px_rgba(0,212,255,0.16)]",
+              compact && "p-0",
+            )}
+            style={{ animationDelay: `${Math.min(index * 50, 400)}ms` }}
+          >
             <CardHeader className={compact ? "space-y-2 p-3" : "space-y-2"}>
               <div className="flex items-start justify-between gap-2">
-                <CardTitle className={compact ? "text-sm" : "text-base"}>
+                <CardTitle className={cn(compact ? "text-sm" : "text-base", "text-slate-100")}>
                   {document.originalName}
                 </CardTitle>
                 <Badge variant={statusToBadgeVariant[document.status]}>
@@ -102,7 +113,7 @@ export function DocumentList({ documents, compact = false, onDeleted }: Document
                 </Badge>
               </div>
               {!compact && (
-                <CardDescription>
+                <CardDescription className="text-slate-400">
                   {formatSize(document.size)} • 上传于 {formatDate(document.createdAt)}
                 </CardDescription>
               )}
@@ -121,8 +132,10 @@ export function DocumentList({ documents, compact = false, onDeleted }: Document
               <Button
                 size="sm"
                 variant="ghost"
-                className="text-rose-600 hover:bg-rose-50 hover:text-rose-700"
+                className="text-rose-300 hover:bg-rose-500/20 hover:text-rose-200"
                 onClick={() => setDeleteTarget(document)}
+                aria-label={`删除文档 ${document.originalName}`}
+                title={`删除文档 ${document.originalName}`}
               >
                 <Trash2 className="h-4 w-4" />
               </Button>
