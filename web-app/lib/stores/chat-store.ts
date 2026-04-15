@@ -13,6 +13,12 @@ const nowIso = () => new Date().toISOString();
 
 type MessagePatch = Partial<Pick<ChatMessage, "content" | "citations" | "retrievalPath">>;
 
+type ChatApiError = {
+  error?: string;
+  detail?: string;
+  code?: string;
+};
+
 interface ChatStore {
   sessionsByDocument: Record<string, ChatSession[]>;
   messagesBySession: Record<string, ChatMessage[]>;
@@ -42,6 +48,19 @@ function updateMessage(
     ...messagesBySession,
     [sessionId]: (messagesBySession[sessionId] ?? []).map((message) =>
       message.id === messageId ? { ...message, ...patch } : message,
+    ),
+  };
+}
+
+function removeMessages(
+  messagesBySession: Record<string, ChatMessage[]>,
+  sessionId: string,
+  messageIds: string[],
+) {
+  return {
+    ...messagesBySession,
+    [sessionId]: (messagesBySession[sessionId] ?? []).filter(
+      (message) => !messageIds.includes(message.id),
     ),
   };
 }
@@ -139,155 +158,187 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       return;
     }
 
+    const userMessageId = generateId();
+    const assistantMessageId = generateId();
+
+    const performSend = async (targetSessionId: string, allowRetry: boolean) => {
+      const userMessage: ChatMessage = {
+        id: userMessageId,
+        sessionId: targetSessionId,
+        role: "USER",
+        content: question,
+        createdAt: nowIso(),
+      };
+
+      const assistantMessage: ChatMessage = {
+        id: assistantMessageId,
+        sessionId: targetSessionId,
+        role: "ASSISTANT",
+        content: "",
+        createdAt: nowIso(),
+      };
+
+      set((prev) => ({
+        isStreaming: true,
+        streamError: null,
+        currentStage: "analyzing",
+        activeSessionIdByDocument: {
+          ...prev.activeSessionIdByDocument,
+          [documentId]: targetSessionId,
+        },
+        messagesBySession: {
+          ...prev.messagesBySession,
+          [targetSessionId]: [
+            ...(prev.messagesBySession[targetSessionId] ?? []),
+            userMessage,
+            assistantMessage,
+          ],
+        },
+      }));
+
+      try {
+        const response = await fetch("/api/chat", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            doc_id: documentId,
+            session_id: targetSessionId,
+            query: question,
+            mode,
+          }),
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          let payload: ChatApiError | null = null;
+
+          try {
+            payload = JSON.parse(errorText) as ChatApiError;
+          } catch {
+            payload = null;
+          }
+
+          if (allowRetry && payload?.code === "INVALID_SESSION") {
+            set((prev) => ({
+              isStreaming: false,
+              currentStage: null,
+              messagesBySession: removeMessages(prev.messagesBySession, targetSessionId, [
+                userMessageId,
+                assistantMessageId,
+              ]),
+            }));
+
+            const recoveredSession = get().createSession(documentId, question.slice(0, 40));
+            await performSend(recoveredSession.id, false);
+            return;
+          }
+
+          throw new Error(payload?.detail ?? payload?.error ?? `Chat request failed (${response.status})`);
+        }
+
+        if (!response.body) {
+          throw new Error("Chat request returned no stream body");
+        }
+
+        const decoder = new TextDecoder();
+
+        const parser = createParser({
+          onEvent: (event) => {
+            if (!event.data) {
+              return;
+            }
+
+            let parsed: AskSseEvent;
+            try {
+              parsed = JSON.parse(event.data) as AskSseEvent;
+            } catch {
+              return;
+            }
+
+            if (parsed.event === "stage") {
+              set({ currentStage: parsed.data.stage });
+              return;
+            }
+
+            if (parsed.event === "token") {
+              set((prev) => ({
+                messagesBySession: updateMessage(
+                  prev.messagesBySession,
+                  targetSessionId,
+                  assistantMessageId,
+                  {
+                    content: `${
+                      (prev.messagesBySession[targetSessionId] ?? []).find(
+                        (message) => message.id === assistantMessageId,
+                      )?.content ?? ""
+                    }${parsed.data.token}`,
+                  },
+                ),
+              }));
+              return;
+            }
+
+            if (parsed.event === "final") {
+              set((prev) => ({
+                isStreaming: false,
+                currentStage: null,
+                messagesBySession: updateMessage(
+                  prev.messagesBySession,
+                  targetSessionId,
+                  assistantMessageId,
+                  {
+                    content: parsed.data.answer,
+                    citations: parsed.data.citations,
+                    retrievalPath: parsed.data.retrieval_path,
+                  },
+                ),
+              }));
+              return;
+            }
+
+            if (parsed.event === "error") {
+              set({
+                isStreaming: false,
+                currentStage: null,
+                streamError: parsed.data.message,
+              });
+            }
+          },
+        });
+
+        const reader = response.body.getReader();
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) {
+            break;
+          }
+
+          parser.feed(decoder.decode(value, { stream: true }));
+        }
+
+        set({
+          isStreaming: false,
+          currentStage: null,
+        });
+      } catch (error) {
+        set({
+          isStreaming: false,
+          currentStage: null,
+          streamError: error instanceof Error ? error.message : "Failed to stream response",
+        });
+      }
+    };
+
     const state = get();
     const activeSessionId =
       sessionId ??
       state.activeSessionIdByDocument[documentId] ??
       state.createSession(documentId, question.slice(0, 40)).id;
 
-    const userMessageId = generateId();
-    const assistantMessageId = generateId();
-
-    const userMessage: ChatMessage = {
-      id: userMessageId,
-      sessionId: activeSessionId,
-      role: "USER",
-      content: question,
-      createdAt: nowIso(),
-    };
-
-    const assistantMessage: ChatMessage = {
-      id: assistantMessageId,
-      sessionId: activeSessionId,
-      role: "ASSISTANT",
-      content: "",
-      createdAt: nowIso(),
-    };
-
-    set((prev) => ({
-      isStreaming: true,
-      streamError: null,
-      currentStage: "analyzing",
-      activeSessionIdByDocument: {
-        ...prev.activeSessionIdByDocument,
-        [documentId]: activeSessionId,
-      },
-      messagesBySession: {
-        ...prev.messagesBySession,
-        [activeSessionId]: [
-          ...(prev.messagesBySession[activeSessionId] ?? []),
-          userMessage,
-          assistantMessage,
-        ],
-      },
-    }));
-
-    try {
-      const response = await fetch("/api/chat", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          doc_id: documentId,
-          session_id: activeSessionId,
-          query: question,
-          mode,
-        }),
-      });
-
-      if (!response.ok || !response.body) {
-        throw new Error(`Chat request failed (${response.status})`);
-      }
-
-      const decoder = new TextDecoder();
-
-      const parser = createParser({
-        onEvent: (event) => {
-          if (!event.data) {
-            return;
-          }
-
-          let parsed: AskSseEvent;
-          try {
-            parsed = JSON.parse(event.data) as AskSseEvent;
-          } catch {
-            return;
-          }
-
-          if (parsed.event === "stage") {
-            set({ currentStage: parsed.data.stage });
-            return;
-          }
-
-          if (parsed.event === "token") {
-            set((prev) => ({
-              messagesBySession: updateMessage(
-                prev.messagesBySession,
-                activeSessionId,
-                assistantMessageId,
-                {
-                  content: `${
-                    (prev.messagesBySession[activeSessionId] ?? []).find(
-                      (message) => message.id === assistantMessageId,
-                    )?.content ?? ""
-                  }${parsed.data.token}`,
-                },
-              ),
-            }));
-            return;
-          }
-
-          if (parsed.event === "final") {
-            set((prev) => ({
-              isStreaming: false,
-              currentStage: null,
-              messagesBySession: updateMessage(
-                prev.messagesBySession,
-                activeSessionId,
-                assistantMessageId,
-                {
-                  content: parsed.data.answer,
-                  citations: parsed.data.citations,
-                  retrievalPath: parsed.data.retrieval_path,
-                },
-              ),
-            }));
-            return;
-          }
-
-          if (parsed.event === "error") {
-            set({
-              isStreaming: false,
-              currentStage: null,
-              streamError: parsed.data.message,
-            });
-          }
-        },
-      });
-
-      const reader = response.body.getReader();
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) {
-          break;
-        }
-
-        parser.feed(decoder.decode(value, { stream: true }));
-      }
-
-      set({
-        isStreaming: false,
-        currentStage: null,
-      });
-    } catch (error) {
-      set({
-        isStreaming: false,
-        currentStage: null,
-        streamError: error instanceof Error ? error.message : "Failed to stream response",
-      });
-    }
+    await performSend(activeSessionId, true);
   },
 
   clearError: () => set({ streamError: null }),

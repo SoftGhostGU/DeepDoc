@@ -34,6 +34,10 @@ async function ensureSession(documentId: string, sessionId: string | undefined, 
   });
 
   if (existing) {
+    if (existing.documentId !== documentId) {
+      return null;
+    }
+
     return existing;
   }
 
@@ -68,6 +72,16 @@ export async function POST(request: Request) {
     }
 
     const session = await ensureSession(body.doc_id, body.session_id, query);
+
+    if (!session) {
+      return NextResponse.json(
+        {
+          error: "Session does not belong to the requested document",
+          code: "INVALID_SESSION",
+        },
+        { status: 409 },
+      );
+    }
 
     await prisma.chatMessage.create({
       data: {

@@ -17,6 +17,8 @@ function sanitizeFilename(fileName: string) {
 }
 
 export async function POST(request: Request) {
+  let createdDocumentId: string | null = null;
+
   try {
     const formData = await request.formData();
     const file = formData.get("file");
@@ -42,6 +44,7 @@ export async function POST(request: Request) {
         status: "PARSING",
       },
     });
+    createdDocumentId = createdDocument.id;
 
     if (isMockMode()) {
       const mockParse = buildMockParseResponse(createdDocument.id);
@@ -99,6 +102,17 @@ export async function POST(request: Request) {
       mode: "real",
     });
   } catch (error) {
+    if (createdDocumentId) {
+      try {
+        await prisma.document.update({
+          where: { id: createdDocumentId },
+          data: { status: "FAILED" },
+        });
+      } catch {
+        // Surface the original upload error even if failure recovery also fails.
+      }
+    }
+
     return NextResponse.json(
       {
         error: "Upload failed",
