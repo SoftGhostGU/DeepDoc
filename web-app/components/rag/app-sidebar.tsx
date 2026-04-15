@@ -22,14 +22,14 @@ export function AppSidebar() {
       <div className="mb-4 flex items-center justify-between gap-2">
         <Link href="/documents" className="flex items-center gap-2 text-sm font-semibold text-slate-900">
           <Library className="h-4 w-4" />
-          Documents
+文档库
         </Link>
         <Button
           size="icon"
           variant="ghost"
           onClick={() => void fetchDocuments()}
           disabled={isLoading}
-          aria-label="Refresh documents"
+          aria-label="刷新文档列表"
         >
           <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
         </Button>

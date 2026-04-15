@@ -26,9 +26,9 @@ export default function DocumentsPage() {
   return (
     <section className="space-y-5">
       <header>
-        <h1 className="text-2xl font-semibold text-slate-900">Document Management</h1>
+        <h1 className="text-2xl font-semibold text-slate-900">文档管理</h1>
         <p className="mt-1 text-sm text-slate-600">
-          Upload source files and open indexed documents in the chat workspace.
+          上传源文件，打开已索引文档进入问答工作区
         </p>
       </header>
 
@@ -41,7 +41,7 @@ export default function DocumentsPage() {
       )}
 
       {isLoading && documents.length === 0 ? (
-        <p className="text-sm text-slate-500">Loading documents...</p>
+        <p className="text-sm text-slate-500">加载中...</p>
       ) : documents.length === 0 ? (
         <EmptyState />
       ) : (

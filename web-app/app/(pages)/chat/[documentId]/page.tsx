@@ -58,16 +58,16 @@ export default function ChatDocumentPage() {
       return;
     }
 
-    const newSession = createSession(documentId, "New Chat");
+    const newSession = createSession(documentId, "新对话");
     setActiveSession(documentId, newSession.id);
   }, [activeSessionId, createSession, documentId, sessions, setActiveSession]);
 
   return (
     <section className="flex h-full min-h-[70vh] flex-col gap-4">
       <header>
-        <h1 className="text-2xl font-semibold text-slate-900">Chat Workspace</h1>
+        <h1 className="text-2xl font-semibold text-slate-900">问答工作区</h1>
         <p className="mt-1 text-sm text-slate-600">
-          Document: {currentDocument?.originalName ?? documentId}
+          文档：{currentDocument?.originalName ?? documentId}
         </p>
       </header>
 
@@ -76,7 +76,7 @@ export default function ChatDocumentPage() {
           sessions={sessions}
           activeSessionId={activeSessionId}
           onCreateSession={() => {
-            const session = createSession(documentId, "New Chat");
+            const session = createSession(documentId, "新对话");
             setActiveSession(documentId, session.id);
           }}
           onSelectSession={(sessionId) => setActiveSession(documentId, sessionId)}
