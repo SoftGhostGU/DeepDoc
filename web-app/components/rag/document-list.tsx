@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Trash2 } from "lucide-react";
+import { ArrowRight, Columns2, Trash2 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -128,6 +128,17 @@ export function DocumentList({ documents, compact = false, onDeleted }: Document
                 打开问答
                 <ArrowRight className="h-4 w-4" />
               </Button>
+
+              {document.status === "INDEXED" && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => router.push(`/compare/${document.id}`)}
+                >
+                  <Columns2 className="h-4 w-4" />
+                  对比
+                </Button>
+              )}
 
               <Button
                 size="sm"

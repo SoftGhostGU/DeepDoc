@@ -5,6 +5,8 @@ import {
   mockCitations,
   mockCompareAnswerHierarchical,
   mockCompareAnswerNaive,
+  mockMultiDocAnswerText,
+  mockMultiDocCitations,
   mockParagraphs,
   mockRetrieveResponse,
 } from "@/lib/mock/data";
@@ -131,6 +133,131 @@ export function createMockChatStream(options?: {
               error instanceof Error
                 ? error.message
                 : "Mock chat stream failed unexpectedly",
+          },
+        } satisfies AskSseEvent);
+        controller.close();
+      }
+    },
+  });
+}
+
+export function createMockMultiDocChatStream(options?: {
+  question?: string;
+  onFinal?: (payload: Extract<AskSseEvent, { event: "final" }>['data']) => Promise<void> | void;
+}) {
+  const question = options?.question?.trim() ?? "";
+
+  return new ReadableStream<Uint8Array>({
+    async start(controller) {
+      try {
+        await sleep(180);
+        await emit(controller, "stage", {
+          event: "stage",
+          data: {
+            stage: "analyzing",
+            message: "正在分析跨文档查询意图...",
+          },
+        } satisfies AskSseEvent);
+
+        await sleep(260);
+        await emit(controller, "stage", {
+          event: "stage",
+          data: {
+            stage: "rewriting",
+            message: "正在改写多文档查询...",
+          },
+        } satisfies AskSseEvent);
+
+        await sleep(420);
+        await emit(controller, "stage", {
+          event: "stage",
+          data: {
+            stage: "retrieving_summary",
+            message: "正在联合检索多文档摘要...",
+          },
+        } satisfies AskSseEvent);
+
+        await emit(controller, "retrieval_summary", {
+          event: "retrieval_summary",
+          data: {
+            chunks: mockMultiDocCitations.map((citation) => ({
+              id: `multi-chunk-${citation.id}`,
+              text: citation.text,
+              score: citation.score,
+              path: citation.documentName
+                ? [citation.documentName, ...citation.path]
+                : citation.path,
+            })),
+          },
+        } satisfies AskSseEvent);
+
+        await sleep(320);
+        await emit(controller, "stage", {
+          event: "stage",
+          data: {
+            stage: "retrieving_paragraphs",
+            message: "正在聚合多文档证据段落...",
+          },
+        } satisfies AskSseEvent);
+
+        const multiDocParagraphs = mockMultiDocCitations
+          .map((citation) => mockParagraphs.find((paragraph) => paragraph.id === citation.paragraph_id))
+          .filter((paragraph): paragraph is (typeof mockParagraphs)[number] => Boolean(paragraph));
+
+        await emit(controller, "retrieval_paragraphs", {
+          event: "retrieval_paragraphs",
+          data: {
+            paragraphs: multiDocParagraphs,
+          },
+        } satisfies AskSseEvent);
+
+        await emit(controller, "stage", {
+          event: "stage",
+          data: {
+            stage: "generating",
+            message: "正在生成跨文档回答...",
+          },
+        } satisfies AskSseEvent);
+
+        const answer = question
+          ? `${mockMultiDocAnswerText}\n\n问题重点：${question}`
+          : mockMultiDocAnswerText;
+
+        for (const token of answer.split(" ")) {
+          await sleep(30 + Math.floor(Math.random() * 20));
+          await emit(controller, "token", {
+            event: "token",
+            data: {
+              stage: "generating",
+              token: `${token} `,
+            },
+          } satisfies AskSseEvent);
+        }
+
+        const finalPayload: Extract<AskSseEvent, { event: "final" }>['data'] = {
+          answer,
+          citations: mockMultiDocCitations,
+          retrieval_path: mockRetrieveResponse.retrieval_path,
+        };
+
+        await emit(controller, "final", {
+          event: "final",
+          data: finalPayload,
+        } satisfies AskSseEvent);
+
+        if (options?.onFinal) {
+          await options.onFinal(finalPayload);
+        }
+
+        controller.close();
+      } catch (error) {
+        await emit(controller, "error", {
+          event: "error",
+          data: {
+            message:
+              error instanceof Error
+                ? error.message
+                : "Mock multi-document chat stream failed unexpectedly",
           },
         } satisfies AskSseEvent);
         controller.close();

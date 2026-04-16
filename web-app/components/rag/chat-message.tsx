@@ -4,8 +4,10 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
 import { CitationMarker } from "@/components/rag/citation-marker";
+import { CopyAnswerButton } from "@/components/rag/copy-answer-button";
 import { CitationSummaryFooter } from "@/components/rag/citation-summary-footer";
 import { cn } from "@/lib/utils";
+import { createDocumentColorMap, getCitationDocumentKey } from "@/lib/utils/doc-colors";
 import type { ChatMessage as ChatMessageType, Citation } from "@/types";
 
 interface ChatMessageProps {
@@ -19,6 +21,16 @@ export function ChatMessage({
   selectedCitationId,
   onCitationClick,
 }: ChatMessageProps) {
+  if (message.role === "SYSTEM") {
+    return (
+      <div className="flex justify-center py-1">
+        <span className="rounded-full border border-dashed border-[var(--border-subtle)] px-3 py-1 text-xs text-[var(--foreground-dim)]">
+          {message.content}
+        </span>
+      </div>
+    );
+  }
+
   const isUser = message.role === "USER";
 
   const citations = message.citations ?? [];
@@ -31,6 +43,9 @@ export function ChatMessage({
   );
 
   const inlineCitations = citations.filter((citation) => inTextCitationIds.includes(citation.id));
+  const documentKeys = Array.from(new Set(citations.map((citation) => getCitationDocumentKey(citation))));
+  const documentColorMap = createDocumentColorMap(documentKeys);
+  const isMultiDocument = documentKeys.length > 1;
 
   return (
     <article
@@ -41,7 +56,7 @@ export function ChatMessage({
     >
       <div
         className={cn(
-          "max-w-[90%] rounded-xl px-4 py-3 text-sm shadow-[0_10px_24px_rgba(0,0,0,0.16)]",
+          "group relative max-w-[90%] rounded-xl px-4 py-3 text-sm shadow-[0_10px_24px_rgba(0,0,0,0.16)]",
           isUser
             ? "border border-[color:rgba(99,102,241,0.22)] bg-[linear-gradient(180deg,var(--accent),var(--accent-muted))] text-white"
             : "border border-[var(--border-subtle)] bg-[var(--surface-raised)] text-[var(--foreground)]",
@@ -51,6 +66,10 @@ export function ChatMessage({
           <p className="whitespace-pre-wrap leading-relaxed">{message.content}</p>
         ) : (
           <div className="space-y-2">
+            <div className="absolute top-2 right-2 opacity-0 transition-opacity duration-150 group-hover:opacity-100">
+              <CopyAnswerButton message={message} />
+            </div>
+
             <div className="max-w-none text-sm leading-relaxed text-[var(--foreground)] [&_a]:text-[var(--accent-hover)] [&_blockquote]:border-l-[var(--accent)] [&_blockquote]:text-[var(--foreground-muted)] [&_code]:text-[var(--accent-hover)]">
               <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content}</ReactMarkdown>
             </div>
@@ -63,6 +82,8 @@ export function ChatMessage({
                     key={citation.id}
                     citation={citation}
                     selected={selectedCitationId === citation.id}
+                    documentColor={documentColorMap[getCitationDocumentKey(citation)]}
+                    showDocumentDot={isMultiDocument}
                     onClick={(citation) => onCitationClick?.(message.id, citation)}
                   />
                 ))}

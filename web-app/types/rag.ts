@@ -7,6 +7,19 @@ export type RagStage =
   | "retrieving_paragraphs"
   | "generating";
 
+export const RAG_STAGES: RagStage[] = [
+  "analyzing",
+  "rewriting",
+  "retrieving_summary",
+  "retrieving_paragraphs",
+  "generating",
+];
+
+export interface StageTimestamp {
+  start: number;
+  end?: number;
+}
+
 export interface DocumentTreeNode {
   id: string;
   title: string;
@@ -83,9 +96,14 @@ export interface RetrieveResponse {
 
 export interface AskRequest {
   doc_id: string;
+  doc_ids?: string[];
   session_id?: string;
   query: string;
   mode?: RagMode;
+  history?: Array<{
+    role: "user" | "assistant";
+    content: string;
+  }>;
   rewrite_options?: Record<string, unknown>;
 }
 
@@ -100,6 +118,8 @@ export interface RagCitation {
   text: string;
   path: string[];
   score: number;
+  documentId?: string;
+  documentName?: string;
 }
 
 export interface SseStageEvent {
