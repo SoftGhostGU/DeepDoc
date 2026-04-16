@@ -18,14 +18,18 @@ export interface Document {
 export interface ChatSession {
   id: string;
   documentId: string;
+  documentIds?: string[];
   title: string;
   createdAt: string;
   updatedAt: string;
 }
 
-export type ChatRole = "USER" | "ASSISTANT";
+export type ChatRole = "USER" | "ASSISTANT" | "SYSTEM";
 
-export type Citation = RagCitation;
+export type Citation = RagCitation & {
+  documentId?: string;
+  documentName?: string;
+};
 
 export type RetrievalPath = RetrievalPathStep;
 

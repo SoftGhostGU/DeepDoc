@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { useShallow } from "zustand/react/shallow";
 
 import { ChatWindow } from "@/components/rag/chat-window";
+import { ExportConversationButton } from "@/components/rag/export-conversation-button";
 import { SessionSidebar } from "@/components/rag/session-sidebar";
 import { useChatStore } from "@/lib/stores/chat-store";
 import { useDocumentStore } from "@/lib/stores/document-store";
@@ -22,12 +23,14 @@ export default function ChatDocumentPage() {
 
   const {
     sessionsByDocument,
+    messagesBySession,
     activeSessionIdByDocument,
     loadHistory,
     createSession,
     setActiveSession,
   } = useChatStore(useShallow((state) => ({
     sessionsByDocument: state.sessionsByDocument,
+    messagesBySession: state.messagesBySession,
     activeSessionIdByDocument: state.activeSessionIdByDocument,
     loadHistory: state.loadHistory,
     createSession: state.createSession,
@@ -43,6 +46,16 @@ export default function ChatDocumentPage() {
   const currentDocument = useMemo(
     () => documents.find((document) => document.id === documentId),
     [documents, documentId],
+  );
+
+  const activeMessages = useMemo(
+    () => (activeSessionId ? messagesBySession[activeSessionId] ?? [] : []),
+    [activeSessionId, messagesBySession],
+  );
+
+  const activeSessionTitle = useMemo(
+    () => sessions.find((session) => session.id === activeSessionId)?.title ?? "新对话",
+    [activeSessionId, sessions],
   );
 
   useEffect(() => {
@@ -64,11 +77,19 @@ export default function ChatDocumentPage() {
 
   return (
     <section className="animate-fade-in-up flex h-full min-h-[70vh] flex-col gap-4">
-      <header>
-        <h1 className="text-2xl font-semibold text-[var(--foreground)]">问答工作区</h1>
-        <p className="mt-1 text-sm text-[var(--foreground-muted)]">
-          文档：{currentDocument?.originalName ?? documentId}
-        </p>
+      <header className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold text-[var(--foreground)]">问答工作区</h1>
+          <p className="mt-1 text-sm text-[var(--foreground-muted)]">
+            文档：{currentDocument?.originalName ?? documentId}
+          </p>
+        </div>
+
+        <ExportConversationButton
+          messages={activeMessages}
+          documentName={currentDocument?.originalName ?? documentId}
+          sessionTitle={activeSessionTitle}
+        />
       </header>
 
       <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[280px_minmax(0,1fr)]">
@@ -82,7 +103,7 @@ export default function ChatDocumentPage() {
           onSelectSession={(sessionId) => setActiveSession(documentId, sessionId)}
         />
 
-        <ChatWindow documentId={documentId} sessionId={activeSessionId} />
+        <ChatWindow documentId={documentId} sessionId={activeSessionId} document={currentDocument} />
       </div>
     </section>
   );
