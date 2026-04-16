@@ -18,13 +18,14 @@ export async function GET(request: Request) {
       return NextResponse.json(mockSuggestedQuestions);
     }
 
-    const upstream = await fetch(
-      `${getRagServiceUrl().replace(/\/$/, "")}/api/suggest?doc_id=${encodeURIComponent(docId)}`,
-      {
-        method: "GET",
-        cache: "no-store",
+    const upstream = await fetch(`${getRagServiceUrl().replace(/\/$/, "")}/api/suggest`, {
+      method: "POST",
+      cache: "no-store",
+      headers: {
+        "Content-Type": "application/json",
       },
-    );
+      body: JSON.stringify({ doc_id: docId }),
+    });
 
     if (!upstream.ok) {
       const detail = await upstream.text();
