@@ -44,6 +44,32 @@ class SearchRequest(BaseModel):
     top_k: int = Field(default=5, description="返回结果数")
 
 
+class RetrievalResultItem(BaseModel):
+    chunk_id: str
+    content: str
+    score: float
+    page: Optional[int] = None
+    section_id: Optional[str] = None
+    chunk_type: str = "paragraph"
+    granularity: str = "detail"
+    source: str = "unknown"
+
+
+class RetrievalRequest(BaseModel):
+    doc_id: str
+    query: str
+    mode: str = "hierarchical"
+    top_k: int = 5
+    rerank: bool = True
+
+
+class RetrievalResponse(BaseModel):
+    results: list[RetrievalResultItem] = Field(default_factory=list)
+    retrieval_path: list[dict] = Field(default_factory=list)
+    scores: list[float] = Field(default_factory=list)
+    build_time: float = 0.0
+
+
 class SearchResponse(BaseModel):
     """检索响应"""
     results: list[dict] = Field(description="检索结果")

@@ -108,8 +108,16 @@ app = create_app()
 
 from app.api import documents
 from app.api import evaluation
+from app.api import retrieval as retrieval_api
+from app.api import ask as ask_api
+from app.api import compare as compare_api
+from app.api import suggest as suggest_api
 
 app.include_router(documents.router, prefix="/api/documents", tags=["Documents"])
+app.include_router(retrieval_api.router, prefix="/api/retrieve", tags=["Retrieval"])
+app.include_router(ask_api.router, prefix="/api/ask", tags=["Ask"])
+app.include_router(compare_api.router, prefix="/api/compare", tags=["Compare"])
+app.include_router(suggest_api.router, prefix="/api/suggest", tags=["Suggest"])
 
 
 # ==================== 评估路由（直接定义） ====================
