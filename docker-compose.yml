@@ -26,14 +26,18 @@ services:
     environment:
       PYTHONUNBUFFERED: "1"
       QDRANT_URL: http://qdrant:6333
+      QDRANT_COLLECTION: ${QDRANT_COLLECTION:-deepdoc_chunks}
       LLM_API_KEY: ${LLM_API_KEY:-}
       LLM_BASE_URL: ${LLM_BASE_URL:-https://api.minimax.chat/v1}
       LLM_MODEL: ${LLM_MODEL:-MiniMax-Text-01}
+      MODEL_CACHE_DIR: ${MODEL_CACHE_DIR:-/app/.cache}
+      RERANK_ENABLED: ${RERANK_ENABLED:-false}
     ports:
       - "8000:8000"
     volumes:
       - ./rag-service:/app
-      - rag-data:/app/data
+      - F:/Program/DeepDoc/.docker/rag-data:/app/data
+      - F:/Program/DeepDoc/.cache:/app/.cache
     command: >
       sh -c "pip install --no-cache-dir uv &&
       uv sync &&
@@ -49,10 +53,8 @@ services:
       - "6333:6333"
       - "6334:6334"
     volumes:
-      - qdrant-storage:/qdrant/storage
+      - F:/Program/DeepDoc/.docker/qdrant-storage:/qdrant/storage
 
 volumes:
   web-node-modules:
   web-pnpm-store:
-  qdrant-storage:
-  rag-data:

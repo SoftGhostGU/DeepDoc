@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.core import get_settings, init_logging, logger
+from app.core.cache import configure_model_cache_env
 from app.models import AppError, HealthResponse
 from app.exceptions import AppException
 
@@ -81,6 +82,7 @@ def create_app() -> FastAPI:
 
 @asynccontextmanager
 async def _lifespan(app: FastAPI):
+    configure_model_cache_env()
     init_logging()
     logger.info("DeepDoc RAG Service starting...")
     logger.info(f"Version: {get_settings().app_version}")

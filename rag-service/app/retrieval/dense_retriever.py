@@ -1,21 +1,31 @@
-"""密集检索器 - 基于 SQLite 向量存储的余弦相似度检索"""
-import numpy as np
-from loguru import logger
+"""Dense retriever backed by Qdrant."""
+
+from __future__ import annotations
+
 from typing import Optional
 
+from loguru import logger
+
+from app.core.database import get_chunks_by_ids
 from app.retrieval.base import RetrievalResult, RetrieverBase
 from app.services.embedding import get_embedding_service
-from app.core.database import get_chunks as db_get_chunks
+from app.services.qdrant_store import get_qdrant_service
 
 
 class DenseRetriever(RetrieverBase):
     def __init__(self):
         self._embed_service = None
+        self._qdrant = None
 
     async def _ensure_embed_service(self):
         if self._embed_service is None:
             self._embed_service = await get_embedding_service()
         return self._embed_service
+
+    async def _ensure_qdrant(self):
+        if self._qdrant is None:
+            self._qdrant = await get_qdrant_service()
+        return self._qdrant
 
     async def search(
         self,
@@ -26,42 +36,49 @@ class DenseRetriever(RetrieverBase):
         granularity: Optional[str] = None,
     ) -> list[RetrievalResult]:
         embed_service = await self._ensure_embed_service()
-        query_vec = np.array(await embed_service.encode_one(query))
+        qdrant = await self._ensure_qdrant()
 
-        chunks = await db_get_chunks(doc_id, chunk_type=chunk_type, granularity=granularity)
-        if not chunks:
-            logger.warning(f"No chunks found for doc_id={doc_id}, chunk_type={chunk_type}")
+        query_vector = await embed_service.encode_one(query)
+        if not query_vector:
             return []
 
-        results = []
-        for chunk in chunks:
-            embedding = chunk.get("embedding")
-            if embedding is None:
-                continue
+        hits = await qdrant.search(
+            doc_id=doc_id,
+            query_vector=query_vector,
+            top_k=top_k,
+            chunk_type=chunk_type,
+            granularity=granularity,
+        )
+        if not hits:
+            logger.warning(f"No dense hits for doc_id={doc_id}, chunk_type={chunk_type}, granularity={granularity}")
+            return []
 
-            chunk_vec = np.array(embedding)
-            norm_q = np.linalg.norm(query_vec)
-            norm_c = np.linalg.norm(chunk_vec)
-            if norm_q == 0 or norm_c == 0:
-                continue
+        ordered_chunk_ids = [hit["chunk_id"] for hit in hits if hit.get("chunk_id")]
+        chunk_map = await get_chunks_by_ids(doc_id, ordered_chunk_ids)
 
-            similarity = float(np.dot(query_vec, chunk_vec) / (norm_q * norm_c))
+        results: list[RetrievalResult] = []
+        for hit in hits:
+            chunk_id = hit["chunk_id"]
+            chunk = chunk_map.get(chunk_id)
+            if not chunk:
+                continue
 
             page_num = None
             page_numbers = chunk.get("page_numbers")
             if isinstance(page_numbers, list) and page_numbers:
                 page_num = page_numbers[0]
 
-            results.append(RetrievalResult(
-                chunk_id=chunk["id"],
-                content=chunk["content"],
-                score=similarity,
-                page=page_num,
-                section_id=chunk.get("section_id"),
-                chunk_type=chunk.get("chunk_type", "paragraph"),
-                granularity=chunk.get("granularity", "detail"),
-                source="dense",
-            ))
+            results.append(
+                RetrievalResult(
+                    chunk_id=chunk_id,
+                    content=chunk.get("content", ""),
+                    score=float(hit["score"]),
+                    page=page_num,
+                    section_id=chunk.get("section_id"),
+                    chunk_type=chunk.get("chunk_type", "paragraph"),
+                    granularity=chunk.get("granularity", "detail"),
+                    source="dense",
+                )
+            )
 
-        results.sort(key=lambda r: r.score, reverse=True)
         return results[:top_k]

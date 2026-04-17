@@ -1,6 +1,9 @@
-"""索引构建模块 - SQLite 向量存储"""
+"""Index building and dense search helpers."""
+
+from __future__ import annotations
+
 import time
-from typing import Any, Optional
+from typing import Optional
 
 from app.core import get_settings, logger
 from app.core.database import (
@@ -11,14 +14,10 @@ from app.core.database import (
     optimize_db,
     save_chunks,
     save_index,
-    save_sections,
 )
 from app.indexing.chunker import HierarchicalChunker, NaiveChunker, SemanticChunker
-from app.indexing.summarizer import ExtractiveSummarizer
 from app.models import (
     Chunk,
-    ChunkType,
-    Granularity,
     IndexRecord,
     IndexRequest,
     IndexResponse,
@@ -26,10 +25,11 @@ from app.models import (
     IndexStrategy,
 )
 from app.services.embedding import get_embedding_service
+from app.services.qdrant_store import get_qdrant_service
 
 
 class IndexBuilder:
-    """索引构建器 - 使用 SQLite 存储向量"""
+    """Build indices and store dense vectors in Qdrant."""
 
     def __init__(self):
         self.settings = get_settings()
@@ -47,35 +47,23 @@ class IndexBuilder:
                 chunk_overlap=self.settings.chunk_overlap,
             ),
         }
-        self.summarizer = ExtractiveSummarizer()
 
     async def build(self, doc_id: str, request: IndexRequest) -> IndexResponse:
-        """构建索引
-
-        完整流程：
-        1. 从数据库获取文档的 sections 和 paragraphs
-        2. 执行分块
-        3. 生成向量
-        4. 事务保存到 SQLite
-        5. 优化数据库
-        """
         start_time = time.time()
         indices: list[IndexRecord] = []
 
-        # 1. 获取文档数据
         doc = await get_document(doc_id)
         if not doc:
             raise ValueError(f"Document not found: {doc_id}")
 
         sections = await get_sections(doc_id)
-        paragraphs = await db_get_chunks(doc_id, chunk_type="paragraph")  # 复用 chunk 表获取段落
+        paragraphs = await db_get_chunks(doc_id, chunk_type="paragraph")
 
-        # 转换为 Section 和 Paragraph
-        from app.models import Section, Paragraph
         section_objs = self._build_sections(sections, paragraphs)
         para_objs = self._build_paragraphs(paragraphs)
 
-        # 2. 为每个策略构建索引
+        qdrant = await get_qdrant_service()
+
         for strategy in request.strategies:
             logger.info(f"Building index with strategy: {strategy}")
 
@@ -84,17 +72,13 @@ class IndexBuilder:
                 logger.warning(f"Unknown strategy: {strategy}, skipping")
                 continue
 
-            # 清空旧索引
             deleted = await delete_chunks(doc_id)
-            logger.info(f"Deleted {deleted} old chunks")
+            await qdrant.delete_document_chunks(doc_id)
+            logger.info(f"Deleted {deleted} old chunks from SQLite and Qdrant")
 
-            # 执行分块
             result = await chunker.chunk(section_objs, para_objs, doc_id)
+            await self._embed_and_save(result.chunks, doc_id)
 
-            # 3. 生成向量并保存
-            await self._embed_and_save(result.chunks, doc_id, strategy)
-
-            # 4. 创建索引记录
             stats = IndexStats(
                 total_chunks=result.chunk_count,
                 section_chunks=result.section_chunks,
@@ -115,86 +99,98 @@ class IndexBuilder:
                 stats=stats,
             )
 
-            # 保存索引记录
-            await save_index({
-                "id": record.id,
-                "doc_id": record.doc_id,
-                "collection_name": "chunks",
-                "strategy": record.strategy.value,
-                "chunk_type": record.chunk_type.value,
-                "chunk_count": record.chunk_count,
-                "status": record.status,
-                "embedding_model": stats.embedding_model,
-                "build_time_seconds": stats.build_time_seconds,
-                "completed_at": time.time() - start_time,
-            })
+            await save_index(
+                {
+                    "id": record.id,
+                    "doc_id": record.doc_id,
+                    "collection_name": self.settings.qdrant_collection,
+                    "strategy": record.strategy.value,
+                    "chunk_type": record.chunk_type.value,
+                    "chunk_count": record.chunk_count,
+                    "status": record.status,
+                    "embedding_model": stats.embedding_model,
+                    "build_time_seconds": stats.build_time_seconds,
+                    "completed_at": time.time() - start_time,
+                }
+            )
 
             indices.append(record)
             logger.info(f"Index built: {strategy.value}, chunks={result.chunk_count}")
 
-        # 5. 优化数据库
         await optimize_db()
-
-        build_time = time.time() - start_time
 
         return IndexResponse(
             doc_id=doc_id,
             indices=indices,
-            build_time=build_time,
+            build_time=time.time() - start_time,
         )
 
-    async def _embed_and_save(
-        self,
-        chunks: list[Chunk],
-        doc_id: str,
-        strategy: IndexStrategy,
-    ) -> None:
-        """生成向量并保存到 SQLite"""
+    async def _embed_and_save(self, chunks: list[Chunk], doc_id: str) -> None:
         if not chunks:
             return
 
-        # 获取嵌入服务
         embed_service = await get_embedding_service()
+        qdrant = await get_qdrant_service()
 
-        # 批量生成向量（分批避免内存问题）
-        batch_size = 32
-        all_chunks_data = []
+        batch_size = self.settings.embedding_batch_size or 32
+        sqlite_chunks: list[dict] = []
+        qdrant_chunks: list[dict] = []
 
         for i in range(0, len(chunks), batch_size):
-            batch = chunks[i:i + batch_size]
-            texts = [c.content for c in batch]
-
-            # 生成向量
+            batch = chunks[i : i + batch_size]
+            texts = [chunk.content for chunk in batch]
             embeddings = await embed_service.encode(texts, batch_size=batch_size)
 
-            # 准备数据
             for chunk, embedding in zip(batch, embeddings):
-                chunk_data = {
-                    "id": chunk.id,
-                    "doc_id": doc_id,
-                    "section_id": chunk.section_id,
-                    "content": chunk.content,
-                    "chunk_type": chunk.chunk_type.value,
-                    "granularity": chunk.granularity.value,
-                    "position": chunk.position,
-                    "page_numbers": chunk.page_numbers,
-                    "char_count": chunk.char_count,
-                    "embedding": embedding,
-                }
-                all_chunks_data.append(chunk_data)
+                granularity = (
+                    chunk.granularity.value
+                    if hasattr(chunk.granularity, "value")
+                    else str(chunk.granularity)
+                )
+                chunk_type = (
+                    chunk.chunk_type.value
+                    if hasattr(chunk.chunk_type, "value")
+                    else str(chunk.chunk_type)
+                )
 
-        # 批量保存（事务）
-        await save_chunks(all_chunks_data)
+                sqlite_chunks.append(
+                    {
+                        "id": chunk.id,
+                        "doc_id": doc_id,
+                        "section_id": chunk.section_id,
+                        "content": chunk.content,
+                        "chunk_type": chunk_type,
+                        "granularity": granularity,
+                        "position": chunk.position,
+                        "page_numbers": chunk.page_numbers,
+                        "char_count": chunk.char_count,
+                        "embedding": None,
+                    }
+                )
+                qdrant_chunks.append(
+                    {
+                        "id": chunk.id,
+                        "doc_id": doc_id,
+                        "section_id": chunk.section_id,
+                        "chunk_type": chunk_type,
+                        "granularity": granularity,
+                        "page_numbers": chunk.page_numbers,
+                        "embedding": embedding,
+                    }
+                )
 
-        logger.info(f"Saved {len(all_chunks_data)} chunks with embeddings")
+        await save_chunks(sqlite_chunks)
+        await qdrant.upsert_chunks(qdrant_chunks)
+
+        logger.info(
+            f"Saved {len(sqlite_chunks)} chunk rows and {len(qdrant_chunks)} vectors for doc_id={doc_id}"
+        )
 
     def _build_sections(self, sections_data: list[dict], paragraphs_data: list[dict]) -> list:
-        """构建 Section 对象"""
-        from app.models import Section, Paragraph
+        from app.models import Paragraph, Section
 
         sections = []
         for sec in sections_data:
-            # 获取该章节的段落
             sec_paragraphs = [
                 Paragraph(
                     id=p["id"],
@@ -203,7 +199,7 @@ class IndexBuilder:
                     position=p["position"],
                     section_id=sec["id"],
                     char_count=p["char_count"],
-                    word_count=p["char_count"] // 5,  # 估算
+                    word_count=p["char_count"] // 5,
                 )
                 for p in paragraphs_data
                 if self._paragraph_matches_section(p, sec)
@@ -233,7 +229,6 @@ class IndexBuilder:
         return section["start_page"] <= page <= section["end_page"]
 
     def _build_paragraphs(self, paragraphs_data: list[dict]) -> list:
-        """构建 Paragraph 对象"""
         from app.models import Paragraph
 
         return [
@@ -250,16 +245,12 @@ class IndexBuilder:
         ]
 
     def _get_chunk_type(self, strategy: IndexStrategy) -> str:
-        """获取主分块类型"""
         mapping = {
             IndexStrategy.HIERARCHICAL: "section",
             IndexStrategy.NAIVE: "paragraph",
             IndexStrategy.SEMANTIC: "sentence",
         }
         return mapping.get(strategy, "paragraph")
-
-
-# ==================== 检索 ====================
 
 
 async def search_similar(
@@ -269,43 +260,33 @@ async def search_similar(
     chunk_type: Optional[str] = None,
     granularity: Optional[str] = None,
 ) -> list[dict]:
-    """相似检索（简单的余弦相似度）"""
-    import numpy as np
+    """Run dense retrieval through Qdrant-backed retriever."""
+    from app.retrieval.dense_retriever import DenseRetriever
 
-    # 获取查询向量
-    embed_service = await get_embedding_service()
-    query_embedding = await embed_service.encode_one(query)
-
-    # 获取文档的所有 chunks
-    chunks = await db_get_chunks(
-        doc_id,
+    retriever = DenseRetriever()
+    results = await retriever.search(
+        query=query,
+        doc_id=doc_id,
+        top_k=top_k,
         chunk_type=chunk_type,
         granularity=granularity,
     )
-
-    if not chunks:
-        return []
-
-    # 计算相似度
-    results = []
-    query_vec = np.array(query_embedding)
-
-    for chunk in chunks:
-        if chunk.get("embedding") is None:
-            continue
-
-        chunk_vec = np.array(chunk["embedding"])
-        similarity = np.dot(query_vec, chunk_vec)  # 已归一化，直接点积
-
-        results.append({
-            "chunk_id": chunk["id"],
-            "content": chunk["content"],
-            "chunk_type": chunk["chunk_type"],
-            "granularity": chunk.get("granularity", "detail"),
-            "section_id": chunk.get("section_id"),
-            "score": float(similarity),
-        })
-
-    # 排序并返回 top_k
-    results.sort(key=lambda x: x["score"], reverse=True)
-    return results[:top_k]
+    if not results and granularity == "summary":
+        results = await retriever.search(
+            query=query,
+            doc_id=doc_id,
+            top_k=top_k,
+            chunk_type=chunk_type,
+            granularity="detail",
+        )
+    return [
+        {
+            "chunk_id": item.chunk_id,
+            "content": item.content,
+            "chunk_type": item.chunk_type,
+            "granularity": item.granularity,
+            "section_id": item.section_id,
+            "score": item.score,
+        }
+        for item in results
+    ]

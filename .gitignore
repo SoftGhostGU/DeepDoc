@@ -20,3 +20,5 @@ uploads/
 .claude/
 .opencode/
 .pnpm-store/
+.cache/
+.docker/

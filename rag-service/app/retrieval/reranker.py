@@ -1,7 +1,13 @@
-"""重排器 - 基于 cross-encoder 的重排序"""
-from loguru import logger
+"""Optional reranker based on sentence-transformers CrossEncoder."""
+
+from __future__ import annotations
+
+import asyncio
 from typing import Optional
 
+from loguru import logger
+
+from app.core.config import get_settings
 from app.retrieval.base import RetrievalResult
 
 
@@ -11,6 +17,7 @@ class Reranker:
     def __init__(self):
         self._model = None
         self._model_loaded = False
+        self._enabled = get_settings().rerank_enabled
 
     @classmethod
     def get_instance(cls) -> "Reranker":
@@ -18,23 +25,28 @@ class Reranker:
             cls._instance = cls()
         return cls._instance
 
-    async def _load_model(self):
+    async def _load_model(self) -> None:
         if self._model_loaded:
             return
+
+        if not self._enabled:
+            self._model_loaded = True
+            logger.info("Reranker disabled by configuration")
+            return
+
         try:
             from sentence_transformers import CrossEncoder
-            import asyncio
 
             loop = asyncio.get_event_loop()
             self._model = await loop.run_in_executor(
                 None,
                 lambda: CrossEncoder("BAAI/bge-reranker-v2-m3"),
             )
-            self._model_loaded = True
             logger.info("Reranker model loaded: bge-reranker-v2-m3")
-        except Exception as e:
-            logger.warning(f"Failed to load reranker model, using fallback scoring: {e}")
+        except Exception as exc:
+            logger.warning(f"Failed to load reranker model, fallback to original ranking: {exc}")
             self._model = None
+        finally:
             self._model_loaded = True
 
     async def rerank(
@@ -48,10 +60,10 @@ class Reranker:
 
         await self._load_model()
 
-        if self._model is not None:
-            return await self._rerank_with_model(query, results, top_k)
+        if self._model is None:
+            return self._rerank_fallback(results, top_k)
 
-        return self._rerank_fallback(results, top_k)
+        return await self._rerank_with_model(query, results, top_k)
 
     async def _rerank_with_model(
         self,
@@ -59,35 +71,26 @@ class Reranker:
         results: list[RetrievalResult],
         top_k: int,
     ) -> list[RetrievalResult]:
-        import asyncio
-        import numpy as np
-
-        pairs = [(query, r.content) for r in results]
-
+        pairs = [(query, item.content) for item in results]
         loop = asyncio.get_event_loop()
-        scores = await loop.run_in_executor(
-            None,
-            self._model.predict,
-            pairs,
-        )
+        scores = await loop.run_in_executor(None, self._model.predict, pairs)
 
         max_score = max(scores) if len(scores) > 0 else 1.0
-
-        scored_results = []
-        for result, score in zip(results, scores):
+        ranked: list[RetrievalResult] = []
+        for item, score in zip(results, scores):
             normalized = float(score / max_score) if max_score > 0 else 0.0
-            scored_results.append(result.model_copy(update={
-                "score": normalized,
-                "source": "reranked",
-            }))
+            ranked.append(
+                item.model_copy(
+                    update={
+                        "score": normalized,
+                        "source": "reranked",
+                    }
+                )
+            )
 
-        scored_results.sort(key=lambda r: r.score, reverse=True)
-        return scored_results[:top_k]
+        ranked.sort(key=lambda value: value.score, reverse=True)
+        return ranked[:top_k]
 
-    def _rerank_fallback(
-        self,
-        results: list[RetrievalResult],
-        top_k: int,
-    ) -> list[RetrievalResult]:
-        results.sort(key=lambda r: r.score, reverse=True)
-        return [r.model_copy(update={"source": "reranked"}) for r in results[:top_k]]
+    def _rerank_fallback(self, results: list[RetrievalResult], top_k: int) -> list[RetrievalResult]:
+        ranked = sorted(results, key=lambda item: item.score, reverse=True)
+        return [item.model_copy(update={"source": "reranked"}) for item in ranked[:top_k]]

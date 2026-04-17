@@ -295,6 +295,31 @@ async def get_chunks(doc_id: str, chunk_type: Optional[str] = None, granularity:
             return results
 
 
+async def get_chunks_by_ids(doc_id: str, chunk_ids: list[str]) -> dict[str, dict]:
+    """Get chunks by ids for a document."""
+    if not chunk_ids:
+        return {}
+
+    placeholders = ",".join("?" for _ in chunk_ids)
+    query = (
+        f"SELECT id, doc_id, section_id, content, chunk_type, granularity, position, page_numbers, char_count "
+        f"FROM chunks WHERE doc_id = ? AND id IN ({placeholders})"
+    )
+    params: list[Any] = [doc_id, *chunk_ids]
+
+    async with aiosqlite.connect(DATABASE_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        async with db.execute(query, params) as cursor:
+            rows = await cursor.fetchall()
+            results: dict[str, dict] = {}
+            for row in rows:
+                chunk = dict(row)
+                if chunk.get("page_numbers"):
+                    chunk["page_numbers"] = json.loads(chunk["page_numbers"])
+                results[chunk["id"]] = chunk
+            return results
+
+
 async def delete_chunks(doc_id: str) -> int:
     """删除文档的所有分块（级联删除）"""
     async with aiosqlite.connect(DATABASE_PATH) as db:
