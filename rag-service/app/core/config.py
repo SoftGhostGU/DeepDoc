@@ -47,6 +47,8 @@ class Settings(BaseSettings):
     # ==================== Embedding 配置 ====================
     embedding_model: str = "bge-large-zh-v1.5"
     embedding_batch_size: int = 32
+    embedding_api_key: Optional[str] = None
+    embedding_base_url: Optional[str] = None
 
     # ==================== 日志配置 ====================
     log_level: str = "INFO"

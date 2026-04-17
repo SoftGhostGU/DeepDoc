@@ -61,25 +61,64 @@ docker compose up
 
 只会启动 web 服务（rag 和 qdrant 在 `full` profile 下，不指定则不启动）。
 
-### 方式三：本地分别启动
+### 方式三：Qdrant Docker + 本地服务
 
-**1. 启动 Qdrant：**
+Qdrant 用 Docker 启动，RAG 服务和 Next.js 在本地运行，方便开发调试。
+
+**1. 启动 Qdrant（Docker）：**
 
 ```bash
-docker run -d -p 6333:6333 -p 6334:6334 qdrant/qdrant:v1.15.1
+docker run -d \
+  --name deepdoc-qdrant \
+  -p 6333:6333 \
+  -p 6334:6334 \
+  -v qdrant-storage:/qdrant/storage \
+  qdrant/qdrant:v1.15.1
 ```
 
-**2. 启动 RAG 服务：**
+> `-v qdrant-storage:/qdrant/storage` 持久化向量数据，容器删除后数据不丢失。
+
+验证 Qdrant 是否正常：访问 http://localhost:6333/dashboard 或执行：
+
+```bash
+curl http://localhost:6333/healthz
+```
+
+后续启停：
+
+```bash
+docker start deepdoc-qdrant   # 启动已有容器
+docker stop deepdoc-qdrant    # 停止
+docker rm deepdoc-qdrant      # 删除（数据保留在 qdrant-storage 卷中）
+```
+
+**2. 启动 RAG 服务（本地）：**
 
 ```bash
 cd rag-service
 cp .env.example .env
-# 编辑 .env，填入 LLM_API_KEY
+```
+
+编辑 `rag-service/.env`，确保以下配置：
+
+```env
+QDRANT_HOST=localhost
+QDRANT_PORT=6333
+LLM_API_KEY=你的LLM密钥
+LLM_BASE_URL=https://api.minimax.chat/v1
+LLM_MODEL=MiniMax-Text-01
+```
+
+然后启动：
+
+```bash
 uv sync
 uv run uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 
-**3. 启动 Next.js：**
+验证 RAG 服务是否正常：访问 http://localhost:8000/health
+
+**3. 启动 Next.js（本地）：**
 
 ```bash
 cd web-app
