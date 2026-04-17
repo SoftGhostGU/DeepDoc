@@ -1,12 +1,15 @@
 import { NextResponse } from "next/server";
 
 import { createMockCompareStream } from "@/lib/mock/sse";
+import { prisma } from "@/lib/prisma";
 import {
   forwardJsonToRag,
   isMockMode,
   passthroughSseResponse,
   SSE_HEADERS,
 } from "@/lib/rag-client";
+import { RagDocumentSyncError, resolveSingleRagDocumentId } from "@/lib/rag-sync";
+import { getSyncableDocumentById } from "@/lib/rag-sync-store";
 
 export const runtime = "nodejs";
 
@@ -32,8 +35,11 @@ export async function POST(request: Request) {
       return new Response(stream, { headers: SSE_HEADERS });
     }
 
+    const document = await getSyncableDocumentById(prisma, body.doc_id);
+    const ragDocumentId = resolveSingleRagDocumentId(document);
+
     const upstream = await forwardJsonToRag("/api/compare", {
-      doc_id: body.doc_id,
+      doc_id: ragDocumentId,
       query,
     });
 
@@ -47,6 +53,16 @@ export async function POST(request: Request) {
 
     return passthroughSseResponse(upstream);
   } catch (error) {
+    if (error instanceof RagDocumentSyncError) {
+      return NextResponse.json(
+        {
+          error: error.message,
+          code: error.code,
+        },
+        { status: error.status },
+      );
+    }
+
     return NextResponse.json(
       {
         error: "Compare route failed",

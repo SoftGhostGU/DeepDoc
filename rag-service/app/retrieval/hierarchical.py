@@ -55,6 +55,12 @@ class HierarchicalRetriever:
     ) -> list[RetrievalResult]:
         dense_results = await self.dense.search(query, doc_id, top_k=top_k, chunk_type="section", granularity="summary")
         sparse_results = await self.sparse.search(query, doc_id, top_k=top_k, chunk_type="section", granularity="summary")
+        fused = rrf_fuse([dense_results, sparse_results])
+        if fused:
+            return fused
+
+        dense_results = await self.dense.search(query, doc_id, top_k=top_k, chunk_type="section", granularity="detail")
+        sparse_results = await self.sparse.search(query, doc_id, top_k=top_k, chunk_type="section", granularity="detail")
         return rrf_fuse([dense_results, sparse_results])
 
     async def _retrieve_paragraphs(

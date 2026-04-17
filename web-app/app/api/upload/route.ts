@@ -6,7 +6,9 @@ import type { Prisma } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
 import { buildMockParseResponse } from "@/lib/mock/data";
-import { forwardMultipartToRag, isMockMode } from "@/lib/rag-client";
+import { forwardJsonToRag, forwardMultipartToRag, isMockMode } from "@/lib/rag-client";
+import { parseAndIndexDocument, RagUploadError } from "@/lib/rag-upload";
+import { setDocumentRagDocumentId } from "@/lib/rag-sync-store";
 
 export const runtime = "nodejs";
 
@@ -65,27 +67,11 @@ export async function POST(request: Request) {
       });
     }
 
-    const ragForm = new FormData();
-    ragForm.append("file", file, file.name);
-
-    const upstream = await forwardMultipartToRag("/api/documents/parse", ragForm);
-    if (!upstream.ok) {
-      await prisma.document.update({
-        where: { id: createdDocument.id },
-        data: { status: "FAILED" },
-      });
-
-      const errorText = await upstream.text();
-      return NextResponse.json(
-        { error: "RAG parse failed", detail: errorText },
-        { status: upstream.status },
-      );
-    }
-
-    const parsePayload = (await upstream.json()) as {
-      structure_tree?: unknown;
-      stats?: { page_count?: number };
-    };
+    const { ragDocumentId, parsePayload } = await parseAndIndexDocument({
+      file,
+      forwardMultipartToRag,
+      forwardJsonToRag,
+    });
 
     const updatedDocument = await prisma.document.update({
       where: { id: createdDocument.id },
@@ -95,6 +81,7 @@ export async function POST(request: Request) {
         pageCount: parsePayload.stats?.page_count,
       },
     });
+    await setDocumentRagDocumentId(prisma, createdDocument.id, ragDocumentId);
 
     return NextResponse.json({
       document: updatedDocument,
@@ -102,6 +89,23 @@ export async function POST(request: Request) {
       mode: "real",
     });
   } catch (error) {
+    if (error instanceof RagUploadError) {
+      if (createdDocumentId) {
+        await prisma.document.update({
+          where: { id: createdDocumentId },
+          data: { status: "FAILED" },
+        });
+      }
+
+      return NextResponse.json(
+        {
+          error: `RAG ${error.stage} failed`,
+          detail: error.detail,
+        },
+        { status: error.status },
+      );
+    }
+
     if (createdDocumentId) {
       try {
         await prisma.document.update({

@@ -9,6 +9,8 @@ import {
   passthroughSseResponse,
   SSE_HEADERS,
 } from "@/lib/rag-client";
+import { RagDocumentSyncError, resolveRagDocumentIds } from "@/lib/rag-sync";
+import { getSyncableDocumentsByIds } from "@/lib/rag-sync-store";
 
 export const runtime = "nodejs";
 
@@ -131,14 +133,16 @@ export async function POST(request: Request) {
       );
     }
 
-    const documents = await prisma.document.findMany({
-      where: { id: { in: requestedDocumentIds } },
-      select: { id: true },
-    });
+    const documents = await getSyncableDocumentsByIds(prisma, requestedDocumentIds);
 
     if (documents.length !== requestedDocumentIds.length) {
       return NextResponse.json({ error: "One or more documents were not found" }, { status: 404 });
     }
+
+    const { primaryDocumentId: primaryRagDocumentId, ragDocumentIds } = resolveRagDocumentIds(
+      requestedDocumentIds,
+      documents,
+    );
 
     const session = await ensureSession(requestedDocumentIds, body.session_id, query);
 
@@ -207,8 +211,8 @@ export async function POST(request: Request) {
 
     const upstream = await forwardJsonToRag("/api/ask", {
       ...(requestedDocumentIds.length > 1
-        ? { doc_ids: requestedDocumentIds }
-        : { doc_id: primaryDocumentId }),
+        ? { doc_ids: ragDocumentIds, doc_id: primaryRagDocumentId }
+        : { doc_id: primaryRagDocumentId }),
       query,
       mode: body.mode ?? "hierarchical",
       history: body.history ?? [],
@@ -280,6 +284,16 @@ export async function POST(request: Request) {
       },
     });
   } catch (error) {
+    if (error instanceof RagDocumentSyncError) {
+      return NextResponse.json(
+        {
+          error: error.message,
+          code: error.code,
+        },
+        { status: error.status },
+      );
+    }
+
     return NextResponse.json(
       {
         error: "Chat route failed",

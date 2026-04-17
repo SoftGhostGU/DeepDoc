@@ -206,7 +206,7 @@ class IndexBuilder:
                     word_count=p["char_count"] // 5,  # 估算
                 )
                 for p in paragraphs_data
-                if p.get("section_id") == sec["id"]
+                if self._paragraph_matches_section(p, sec)
             ]
 
             section = Section(
@@ -222,6 +222,15 @@ class IndexBuilder:
             sections.append(section)
 
         return sections
+
+    def _paragraph_matches_section(self, paragraph: dict, section: dict) -> bool:
+        explicit_section_id = paragraph.get("section_id")
+        if explicit_section_id:
+            return explicit_section_id == section["id"]
+
+        page_numbers = paragraph.get("page_numbers") or []
+        page = page_numbers[0] if page_numbers else 1
+        return section["start_page"] <= page <= section["end_page"]
 
     def _build_paragraphs(self, paragraphs_data: list[dict]) -> list:
         """构建 Paragraph 对象"""
