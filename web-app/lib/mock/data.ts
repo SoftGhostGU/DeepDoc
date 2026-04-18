@@ -182,6 +182,7 @@ export const mockCitations: RagCitation[] = [
     text: mockParagraphs[4]?.text ?? "",
     path: ["第二章", "第 2.1 节", "段落 5"],
     score: 0.95,
+    page: mockParagraphs[4]?.page,
   },
   {
     id: 2,
@@ -189,6 +190,7 @@ export const mockCitations: RagCitation[] = [
     text: mockParagraphs[5]?.text ?? "",
     path: ["第二章", "第 2.1 节", "段落 6"],
     score: 0.93,
+    page: mockParagraphs[5]?.page,
   },
   {
     id: 3,
@@ -196,6 +198,7 @@ export const mockCitations: RagCitation[] = [
     text: mockParagraphs[23]?.text ?? "",
     path: ["第五章", "第 5.2 节", "段落 24"],
     score: 0.91,
+    page: mockParagraphs[23]?.page,
   },
   {
     id: 4,
@@ -203,6 +206,7 @@ export const mockCitations: RagCitation[] = [
     text: mockParagraphs[24]?.text ?? "",
     path: ["第五章", "第 5.2 节", "段落 25"],
     score: 0.88,
+    page: mockParagraphs[24]?.page,
   },
   {
     id: 5,
@@ -210,6 +214,7 @@ export const mockCitations: RagCitation[] = [
     text: mockParagraphs[25]?.text ?? "",
     path: ["第五章", "第 5.2 节", "段落 26"],
     score: 0.85,
+    page: mockParagraphs[25]?.page,
   },
 ];
 
@@ -220,6 +225,7 @@ export const mockMultiDocCitations: RagCitation[] = [
     text: mockParagraphs[6]?.text ?? "",
     path: ["架构白皮书", "第二章", "段落 7"],
     score: 0.96,
+    page: mockParagraphs[6]?.page,
     documentId: "doc-architecture",
     documentName: "架构白皮书",
   },
@@ -229,6 +235,7 @@ export const mockMultiDocCitations: RagCitation[] = [
     text: mockParagraphs[17]?.text ?? "",
     path: ["产品方案", "第四章", "段落 18"],
     score: 0.93,
+    page: mockParagraphs[17]?.page,
     documentId: "doc-product-plan",
     documentName: "产品方案",
   },
@@ -238,6 +245,7 @@ export const mockMultiDocCitations: RagCitation[] = [
     text: mockParagraphs[25]?.text ?? "",
     path: ["实验评估报告", "第五章", "段落 26"],
     score: 0.91,
+    page: mockParagraphs[25]?.page,
     documentId: "doc-evaluation",
     documentName: "实验评估报告",
   },

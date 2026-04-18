@@ -39,6 +39,7 @@ export interface ParagraphItem {
   page?: number;
   index: number;
   text: string;
+  score?: number;
 }
 
 export interface ParagraphList {
@@ -118,6 +119,7 @@ export interface RagCitation {
   text: string;
   path: string[];
   score: number;
+  page?: number;
   documentId?: string;
   documentName?: string;
 }

@@ -42,8 +42,8 @@ export function CitationMarker({
       }}
       title={
         citation.documentName
-          ? `${citation.documentName} · ${citation.path.join(" > ")}`
-          : citation.path.join(" > ")
+          ? `${citation.documentName} · ${citation.path.join(" > ")}${citation.page ? ` · 第 ${citation.page} 页` : ""}`
+          : `${citation.path.join(" > ")}${citation.page ? ` · 第 ${citation.page} 页` : ""}`
       }
       aria-label={`查看引用 ${citation.id}`}
     >

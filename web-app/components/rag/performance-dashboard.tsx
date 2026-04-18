@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import ReactECharts from "echarts-for-react";
 
+import { ScrollArea } from "@/components/ui/scroll-area";
 import type { ParagraphItem, RagStage, RetrievedChunk, StageTimestamp } from "@/types/rag";
 import { RAG_STAGES } from "@/types/rag";
 
@@ -165,50 +166,56 @@ export function PerformanceDashboard({
 
   if (!hasData) {
     return (
-      <div className="flex h-full items-center justify-center">
+      <div className="flex h-full min-h-0 w-full items-center justify-center">
         <p className="text-sm text-[var(--foreground-dim)]">提问后查看性能指标</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
-      <div>
-        <ReactECharts option={barOption} style={{ height: 180 }} opts={{ renderer: "canvas" }} />
-      </div>
+    <div className="flex h-full min-h-0 flex-col">
+      <ScrollArea className="h-full min-h-0 flex-1 pr-2">
+        <div className="space-y-4">
+          <div>
+            <ReactECharts option={barOption} style={{ height: 180 }} opts={{ renderer: "canvas" }} />
+          </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        <div className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface)] p-3">
-          <p className="text-xs text-[var(--foreground-dim)]">摘要检索命中</p>
-          <p className="mt-1 text-lg font-semibold text-[var(--foreground)]">{retrievedChunks.length} 条</p>
-        </div>
-        <div className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface)] p-3">
-          <p className="text-xs text-[var(--foreground-dim)]">段落精排命中</p>
-          <p className="mt-1 text-lg font-semibold text-[var(--foreground)]">{retrievedParagraphs.length} 条</p>
-        </div>
-      </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface)] p-3">
+              <p className="text-xs text-[var(--foreground-dim)]">摘要检索命中</p>
+              <p className="mt-1 text-lg font-semibold text-[var(--foreground)]">{retrievedChunks.length} 条</p>
+            </div>
+            <div className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface)] p-3">
+              <p className="text-xs text-[var(--foreground-dim)]">段落精排命中</p>
+              <p className="mt-1 text-lg font-semibold text-[var(--foreground)]">{retrievedParagraphs.length} 条</p>
+            </div>
+          </div>
 
-      {scores.length > 0 && (
-        <div className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface)] p-3">
-          <p className="text-xs text-[var(--foreground-dim)]">分数范围</p>
-          <p className="mt-1 text-sm font-medium text-[var(--foreground)]">
-            {(Math.min(...scores) * 100).toFixed(0)}% — {(Math.max(...scores) * 100).toFixed(0)}%
-            <span className="ml-2 text-[var(--foreground-dim)]">平均 {(scores.reduce((a, b) => a + b, 0) / scores.length * 100).toFixed(0)}%</span>
-          </p>
-        </div>
-      )}
+          {scores.length > 0 && (
+            <div className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface)] p-3">
+              <p className="text-xs text-[var(--foreground-dim)]">分数范围</p>
+              <p className="mt-1 text-sm font-medium text-[var(--foreground)]">
+                {(Math.min(...scores) * 100).toFixed(0)}% — {(Math.max(...scores) * 100).toFixed(0)}%
+                <span className="ml-2 text-[var(--foreground-dim)]">
+                  平均 {(scores.reduce((a, b) => a + b, 0) / scores.length * 100).toFixed(0)}%
+                </span>
+              </p>
+            </div>
+          )}
 
-      {tokensPerSecond > 0 && (
-        <div className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface)] p-3">
-          <p className="text-xs text-[var(--foreground-dim)]">生成速度</p>
-          <p className="mt-1 text-sm font-medium text-[var(--foreground)]">{tokensPerSecond} tokens/sec</p>
-        </div>
-      )}
+          {tokensPerSecond > 0 && (
+            <div className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface)] p-3">
+              <p className="text-xs text-[var(--foreground-dim)]">生成速度</p>
+              <p className="mt-1 text-sm font-medium text-[var(--foreground)]">{tokensPerSecond} tokens/sec</p>
+            </div>
+          )}
 
-      <div>
-        <p className="mb-2 text-xs font-medium text-[var(--foreground-muted)]">耗时分布</p>
-        <ReactECharts option={donutOption} style={{ height: 180 }} opts={{ renderer: "canvas" }} />
-      </div>
+          <div>
+            <p className="mb-2 text-xs font-medium text-[var(--foreground-muted)]">耗时分布</p>
+            <ReactECharts option={donutOption} style={{ height: 180 }} opts={{ renderer: "canvas" }} />
+          </div>
+        </div>
+      </ScrollArea>
     </div>
   );
 }

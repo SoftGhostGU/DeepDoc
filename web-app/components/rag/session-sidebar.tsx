@@ -21,8 +21,8 @@ export function SessionSidebar({
   onSelectSession,
 }: SessionSidebarProps) {
   return (
-    <section className="flex h-full w-full max-w-xs flex-col rounded-xl border border-[var(--border-subtle)] bg-[var(--surface)] p-3 shadow-[0_12px_28px_rgba(0,0,0,0.16)]">
-      <div className="mb-3 flex items-center justify-between">
+    <section className="shrink-0 flex h-full min-h-0 w-full max-w-xs flex-col rounded-xl border border-[var(--border-subtle)] bg-[var(--surface)] p-3 shadow-[0_12px_28px_rgba(0,0,0,0.16)]">
+      <div className="mb-3 shrink-0 flex items-center justify-between">
         <h2 className="text-sm font-semibold text-[var(--foreground)]">对话记录</h2>
         <Button size="sm" variant="outline" onClick={onCreateSession}>
           <MessageSquarePlus className="h-4 w-4" />
@@ -30,7 +30,7 @@ export function SessionSidebar({
         </Button>
       </div>
 
-      <ScrollArea className="flex-1">
+      <ScrollArea className="h-full min-h-0 flex-1">
         <div className="space-y-2">
           {sessions.length === 0 && (
             <p className="rounded-md border border-dashed border-[var(--border-subtle)] bg-[var(--surface-raised)] p-3 text-xs text-[var(--foreground-dim)]">

@@ -74,6 +74,7 @@ class SparseRetriever(RetrieverBase):
                 content=chunk["content"],
                 score=normalized,
                 page=page_num,
+                paragraph_index=chunk.get("position"),
                 section_id=chunk.get("section_id"),
                 chunk_type=chunk.get("chunk_type", "paragraph"),
                 granularity=chunk.get("granularity", "detail"),

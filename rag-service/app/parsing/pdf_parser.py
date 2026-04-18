@@ -14,6 +14,7 @@ from app.models import (
     SectionTreeNode,
 )
 from app.parsing.base import ParseResult, ParsingStrategy
+from app.text_normalization import normalize_extracted_text
 
 
 @dataclass
@@ -114,7 +115,7 @@ class PDFParser(ParsingStrategy):
         # 从元数据获取
         metadata = doc.metadata
         if metadata.get("title"):
-            return metadata["title"]
+            return normalize_extracted_text(metadata["title"])
 
         # 从第一页提取
         if doc.page_count > 0:
@@ -124,7 +125,7 @@ class PDFParser(ParsingStrategy):
             for line in lines[:5]:
                 line = line.strip()
                 if line and len(line) < 100:
-                    return line[:100]
+                    return normalize_extracted_text(line)[:100]
 
         return doc.filename or "Untitled"
 
@@ -142,7 +143,7 @@ class PDFParser(ParsingStrategy):
 
                 for line in block.get("lines", []):
                     for span in line.get("spans", []):
-                        text = span.get("text", "").strip()
+                        text = normalize_extracted_text(span.get("text", "").strip())
                         if not text:
                             continue
 
@@ -226,17 +227,23 @@ class PDFParser(ParsingStrategy):
 
                 bbox = block.get("bbox", (0, 0, 0, 0))
                 text = ""
+                last_span = None
 
                 for line in block.get("lines", []):
                     for span in line.get("spans", []):
+                        last_span = span
                         text += span.get("text", "")
 
-                text = text.strip()
+                text = normalize_extracted_text(text)
                 if not text:
                     continue
 
                 # 跳过标题
-                if self._is_title(text, span.get("size", 0), bool(span.get("flags", 0) & 2)):
+                if last_span and self._is_title(
+                    text,
+                    last_span.get("size", 0),
+                    bool(last_span.get("flags", 0) & 2),
+                ):
                     continue
 
                 blocks.append(

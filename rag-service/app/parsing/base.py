@@ -36,7 +36,7 @@ class ParsingStrategy(ABC):
         """
         pass
 
-    def validate_file(self, file_path: Path, max_size: int = 100 * 1024 * 1024) -> None:
+    def validate_file(self, file_path: Path, max_size: int = 200 * 1024 * 1024) -> None:
         """验证文件
 
         Args:

@@ -2,14 +2,14 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  ReactFlow,
-  Controls,
   Background,
-  useNodesState,
-  useEdgesState,
-  type Node,
-  type Edge,
+  Controls,
   MarkerType,
+  ReactFlow,
+  type Edge,
+  type Node,
+  useEdgesState,
+  useNodesState,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 
@@ -27,7 +27,6 @@ function buildNodesAndEdges(
   root: DocumentTreeNode,
   collapsed: Set<string>,
   highlightedIds: Set<string>,
-  depth = 0,
   parentId?: string,
 ): { nodes: Node<SectionNodeData>[]; edges: Edge[] } {
   const nodes: Node<SectionNodeData>[] = [];
@@ -49,19 +48,28 @@ function buildNodesAndEdges(
   });
 
   if (parentId) {
+    const highlighted = highlightedIds.has(root.id);
     edges.push({
       id: `${parentId}-${root.id}`,
       source: parentId,
       target: root.id,
-      animated: highlightedIds.has(root.id),
-      style: { stroke: highlightedIds.has(root.id) ? "var(--accent)" : "var(--border-subtle)", strokeWidth: highlightedIds.has(root.id) ? 2 : 1 },
-      markerEnd: { type: MarkerType.ArrowClosed, width: 12, height: 12, color: highlightedIds.has(root.id) ? "var(--accent)" : "var(--border-subtle)" },
+      animated: highlighted,
+      style: {
+        stroke: highlighted ? "var(--accent)" : "var(--border-subtle)",
+        strokeWidth: highlighted ? 2 : 1,
+      },
+      markerEnd: {
+        type: MarkerType.ArrowClosed,
+        width: 12,
+        height: 12,
+        color: highlighted ? "var(--accent)" : "var(--border-subtle)",
+      },
     });
   }
 
   if (!isCollapsed && root.children) {
     for (const child of root.children) {
-      const sub = buildNodesAndEdges(child, collapsed, highlightedIds, depth + 1, root.id);
+      const sub = buildNodesAndEdges(child, collapsed, highlightedIds, root.id);
       nodes.push(...sub.nodes);
       edges.push(...sub.edges);
     }
@@ -98,24 +106,26 @@ function layoutTree(nodes: Node[], edges: Edge[]): { nodes: Node[]; edges: Edge[
 
   function place(id: string, left: number, top: number) {
     const children = childMap.get(id) ?? [];
-    const w = subtreeWidth(id);
-    positions.set(id, { x: left + w / 2 - NODE_WIDTH / 2, y: top });
+    const width = subtreeWidth(id);
+    positions.set(id, { x: left + width / 2 - NODE_WIDTH / 2, y: top });
     if (children.length === 0) return;
     let offset = left;
     for (const child of children) {
-      const cw = subtreeWidth(child);
+      const childWidth = subtreeWidth(child);
       place(child, offset, top + NODE_HEIGHT + V_GAP);
-      offset += cw + H_GAP;
+      offset += childWidth + H_GAP;
     }
   }
 
-  const rootId = nodes.find((n) => !parentMap.has(n.id))?.id;
-  if (rootId) place(rootId, 0, 0);
+  const rootId = nodes.find((node) => !parentMap.has(node.id))?.id;
+  if (rootId) {
+    place(rootId, 0, 0);
+  }
 
   return {
-    nodes: nodes.map((n) => ({
-      ...n,
-      position: positions.get(n.id) ?? n.position,
+    nodes: nodes.map((node) => ({
+      ...node,
+      position: positions.get(node.id) ?? node.position,
     })),
     edges,
   };
@@ -127,17 +137,20 @@ export function DocumentMindmap({ tree, retrievedChunks = [] }: DocumentMindmapP
   const highlightedIds = useMemo(() => {
     const ids = new Set<string>();
     for (const chunk of retrievedChunks) {
-      if (chunk.path) {
-        for (const segment of chunk.path) {
-          ids.add(segment);
-        }
+      if (!chunk.path) {
+        continue;
+      }
+      for (const segment of chunk.path) {
+        ids.add(segment);
       }
     }
     return ids;
   }, [retrievedChunks]);
 
   const { nodes: rawNodes, edges: rawEdges } = useMemo(() => {
-    if (!tree) return { nodes: [], edges: [] };
+    if (!tree) {
+      return { nodes: [], edges: [] };
+    }
     return buildNodesAndEdges(tree, collapsed, highlightedIds);
   }, [tree, collapsed, highlightedIds]);
 
@@ -156,40 +169,47 @@ export function DocumentMindmap({ tree, retrievedChunks = [] }: DocumentMindmapP
 
   const onNodeClick = useCallback((_: React.MouseEvent, node: Node) => {
     const data = node.data as unknown as SectionNodeData;
-    if (!data.hasChildren) return;
-    setCollapsed((prev) => {
-      const next = new Set(prev);
-      if (next.has(node.id)) next.delete(node.id);
-      else next.add(node.id);
+    if (!data.hasChildren) {
+      return;
+    }
+    setCollapsed((previous) => {
+      const next = new Set(previous);
+      if (next.has(node.id)) {
+        next.delete(node.id);
+      } else {
+        next.add(node.id);
+      }
       return next;
     });
   }, []);
 
   if (!tree) {
     return (
-      <div className="flex h-full items-center justify-center">
-        <p className="text-sm text-[var(--foreground-dim)]">文档结构暂不可用</p>
+      <div className="flex h-full min-h-0 w-full items-center justify-center">
+        <p className="text-sm text-[var(--foreground-dim)]">该文档未产出结构树</p>
       </div>
     );
   }
 
   return (
-    <div className="h-full w-full min-h-[300px]">
-      <ReactFlow
-        nodes={nodes}
-        edges={edges}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
-        onNodeClick={onNodeClick}
-        nodeTypes={nodeTypes}
-        fitView
-        fitViewOptions={{ padding: 0.2 }}
-        proOptions={{ hideAttribution: true }}
-        className="bg-transparent"
-      >
-        <Controls className="!bg-[var(--surface)] !border-[var(--border-subtle)] [&>button]:!bg-[var(--surface)] [&>button]:!border-[var(--border-subtle)] [&>button]:!text-[var(--foreground)] [&>button:hover]:!bg-[var(--surface-hover)]" />
-        <Background color="var(--border-subtle)" gap={20} size={1} />
-      </ReactFlow>
+    <div className="flex h-full min-h-0 w-full flex-col">
+      <div className="min-h-[300px] flex-1">
+        <ReactFlow
+          nodes={nodes}
+          edges={edges}
+          onNodesChange={onNodesChange}
+          onEdgesChange={onEdgesChange}
+          onNodeClick={onNodeClick}
+          nodeTypes={nodeTypes}
+          fitView
+          fitViewOptions={{ padding: 0.2 }}
+          proOptions={{ hideAttribution: true }}
+          className="bg-transparent"
+        >
+          <Controls className="!bg-[var(--surface)] !border-[var(--border-subtle)] [&>button]:!bg-[var(--surface)] [&>button]:!border-[var(--border-subtle)] [&>button]:!text-[var(--foreground)] [&>button:hover]:!bg-[var(--surface-hover)]" />
+          <Background color="var(--border-subtle)" gap={20} size={1} />
+        </ReactFlow>
+      </div>
     </div>
   );
 }

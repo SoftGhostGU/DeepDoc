@@ -3,63 +3,80 @@
 import { useMemo } from "react";
 import ReactECharts from "echarts-for-react";
 
-import type { ParagraphItem, RetrievedChunk } from "@/types/rag";
+import type { ParagraphItem } from "@/types/rag";
 
 interface DocumentHeatmapProps {
-  paragraphs: ParagraphItem[];
-  retrievedChunks?: RetrievedChunk[];
+  retrievedParagraphs: ParagraphItem[];
+  sectionTitleMap?: Map<string, string>;
+  hasQuery?: boolean;
   onParagraphClick?: (paragraphId: string) => void;
 }
 
-function scoreToColor(score: number): string {
-  if (score >= 0.9) return "#ef4444";
-  if (score >= 0.7) return "#f97316";
-  if (score >= 0.5) return "#3b82f6";
+const MIN_BASELINE = 2;
+
+function scoreToColorNormalized(score: number, minScore: number, maxScore: number, count: number): string {
+  if (count <= 1 || maxScore <= minScore) {
+    return "#f97316";
+  }
+
+  const t = Math.min(1, Math.max(0, (score - minScore) / (maxScore - minScore)));
+  if (t >= 0.8) return "#ef4444";
+  if (t >= 0.6) return "#f97316";
+  if (t >= 0.4) return "#3b82f6";
   if (score > 0) return "#60a5fa";
   return "#27272a";
 }
 
 export function DocumentHeatmap({
-  paragraphs,
-  retrievedChunks = [],
+  retrievedParagraphs,
+  sectionTitleMap,
+  hasQuery = false,
   onParagraphClick,
 }: DocumentHeatmapProps) {
-  const scoreMap = useMemo(() => {
-    const map = new Map<string, number>();
-    for (const chunk of retrievedChunks) {
-      map.set(chunk.id, chunk.score);
-    }
-    return map;
-  }, [retrievedChunks]);
-
   const sectionGroups = useMemo(() => {
     const groups = new Map<string, ParagraphItem[]>();
-    for (const para of paragraphs) {
+    for (const para of retrievedParagraphs) {
       const key = para.node_id ?? "unknown";
       const list = groups.get(key) ?? [];
       list.push(para);
       groups.set(key, list);
     }
     return groups;
-  }, [paragraphs]);
+  }, [retrievedParagraphs]);
 
-  const hasScores = retrievedChunks.length > 0;
+  const scoreRange = useMemo(() => {
+    if (retrievedParagraphs.length === 0) {
+      return { min: 0, max: 0, count: 0 };
+    }
+
+    let min = Number.POSITIVE_INFINITY;
+    let max = Number.NEGATIVE_INFINITY;
+
+    for (const paragraph of retrievedParagraphs) {
+      const score = paragraph.score ?? 0;
+      min = Math.min(min, score);
+      max = Math.max(max, score);
+    }
+
+    return { min, max, count: retrievedParagraphs.length };
+  }, [retrievedParagraphs]);
 
   const option = useMemo(() => {
     const data = Array.from(sectionGroups.entries()).map(([sectionId, paras]) => ({
-      name: sectionId,
+      name: sectionTitleMap?.get(sectionId) ?? "未分类",
       children: paras.map((para) => {
-        const score = scoreMap.get(para.id) ?? 0;
+        const score = para.score ?? 0;
         return {
           name: `段落 ${para.index}`,
-          value: hasScores ? score * 100 : 10,
+          value: score * 100 + MIN_BASELINE,
           paraId: para.id,
           text: para.text,
           score,
           sectionPath: para.node_id ?? "",
+          sectionTitle: sectionTitleMap?.get(sectionId) ?? "未分类",
           paraIndex: para.index,
           itemStyle: {
-            color: hasScores ? scoreToColor(score) : "#27272a",
+            color: scoreToColorNormalized(score, scoreRange.min, scoreRange.max, scoreRange.count),
             borderColor: "#18181b",
             borderWidth: 1,
           },
@@ -69,12 +86,25 @@ export function DocumentHeatmap({
 
     return {
       tooltip: {
-        formatter: (info: { data: { paraIndex: number; sectionPath: string; score: number; text: string; name: string } }) => {
+        formatter: (info: {
+          data: {
+            paraIndex?: number;
+            sectionPath: string;
+            sectionTitle?: string;
+            score: number;
+            text: string;
+            name: string;
+          };
+        }) => {
           const d = info.data;
-          if (!d.paraIndex) return d.name;
-          const scoreText = hasScores ? `<br/>相关度: ${(d.score * 100).toFixed(0)}%` : "<br/>未检索";
+          if (d.paraIndex == null) {
+            return d.name;
+          }
+          const scoreText = `相关度 ${(d.score * 100).toFixed(0)}%`;
+          const sectionLabel = d.sectionTitle || d.sectionPath || "未分类";
           return `<div style="max-width:280px">
-            <b>段落 ${d.paraIndex}</b> · ${d.sectionPath}${scoreText}
+            <b>段落 ${d.paraIndex}</b> · ${sectionLabel}
+            <br/>${scoreText}
             <br/><span style="color:#a1a1aa;font-size:11px">${d.text.slice(0, 100)}${d.text.length > 100 ? "..." : ""}</span>
           </div>`;
         },
@@ -135,34 +165,35 @@ export function DocumentHeatmap({
         },
       ],
     };
-  }, [sectionGroups, scoreMap, hasScores]);
+  }, [scoreRange.count, scoreRange.max, scoreRange.min, sectionGroups, sectionTitleMap]);
 
-  if (paragraphs.length === 0) {
+  if (retrievedParagraphs.length === 0) {
     return (
-      <div className="flex h-full items-center justify-center">
-        <p className="text-sm text-[var(--foreground-dim)]">暂无段落数据</p>
+      <div className="flex h-full min-h-0 w-full items-center justify-center">
+        <p className="text-sm text-[var(--foreground-dim)]">
+          {hasQuery ? "本次检索暂无相关段落" : "提问后查看相关度分布"}
+        </p>
       </div>
     );
   }
 
   return (
-    <div className="h-full w-full min-h-[300px]">
-      {!hasScores && (
-        <p className="mb-2 text-xs text-[var(--foreground-dim)]">提问后查看相关度分布</p>
-      )}
-      <ReactECharts
-        option={option}
-        style={{ height: "100%", minHeight: 280 }}
-        opts={{ renderer: "canvas" }}
-        onEvents={{
-          click: (params: { data?: { paraId?: string } }) => {
-            const paraId = params.data?.paraId;
-            if (paraId && onParagraphClick) {
-              onParagraphClick(paraId);
-            }
-          },
-        }}
-      />
+    <div className="flex h-full min-h-0 w-full flex-col">
+      <div className="min-h-[300px] flex-1">
+        <ReactECharts
+          option={option}
+          style={{ height: "100%", minHeight: 280 }}
+          opts={{ renderer: "canvas" }}
+          onEvents={{
+            click: (params: { data?: { paraId?: string } }) => {
+              const paraId = params.data?.paraId;
+              if (paraId && onParagraphClick) {
+                onParagraphClick(paraId);
+              }
+            },
+          }}
+        />
+      </div>
     </div>
   );
 }

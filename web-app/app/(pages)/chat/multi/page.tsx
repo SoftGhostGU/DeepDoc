@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useMemo } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useShallow } from "zustand/react/shallow";
 
@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useChatStore } from "@/lib/stores/chat-store";
 import { useDocumentStore } from "@/lib/stores/document-store";
+import { cn } from "@/lib/utils";
 import { createDocumentColorMap } from "@/lib/utils/doc-colors";
 
 export default function ChatMultiDocumentPage() {
@@ -29,6 +30,7 @@ export default function ChatMultiDocumentPage() {
 function ChatMultiDocumentPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const [allowSectionScroll, setAllowSectionScroll] = useState(false);
 
   const docsParam = searchParams.get("docs") ?? "";
   const selectedDocumentIds = useMemo(
@@ -173,8 +175,15 @@ function ChatMultiDocumentPageContent() {
   }
 
   return (
-    <section className="animate-fade-in-up flex h-full min-h-[70vh] flex-col gap-4">
-      <header>
+    <section
+      className={cn(
+        "animate-fade-in-up flex min-h-0 flex-col gap-4",
+        allowSectionScroll
+          ? "h-auto min-h-full overflow-y-auto pb-2"
+          : "h-full overflow-hidden",
+      )}
+    >
+      <header className="shrink-0">
         <h1 className="text-2xl font-semibold text-[var(--foreground)]">多文档问答工作区</h1>
         <p className="mt-1 text-sm text-[var(--foreground-muted)]">已选择 {selectedDocumentIds.length} 份文档</p>
 
@@ -200,7 +209,12 @@ function ChatMultiDocumentPageContent() {
         </div>
       </header>
 
-      <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[280px_minmax(0,1fr)]">
+      <div
+        className={cn(
+          "grid gap-4 lg:grid-cols-[280px_minmax(0,1fr)]",
+          allowSectionScroll ? "h-auto" : "min-h-0 flex-1 overflow-hidden",
+        )}
+      >
         <SessionSidebar
           sessions={sessions}
           activeSessionId={activeSessionId}
@@ -215,6 +229,7 @@ function ChatMultiDocumentPageContent() {
           documentId={primaryDocumentId}
           documentIds={selectedDocumentIds}
           sessionId={activeSessionId}
+          onCompactViewportChange={setAllowSectionScroll}
         />
       </div>
     </section>

@@ -10,6 +10,7 @@ from app.retrieval.naive import NaiveRetriever
 from app.generation.generator import Generator
 from app.generation.citation_extractor import extract_citations
 from app.retrieval.base import RetrievalResult
+from app.text_normalization import normalize_extracted_text
 
 
 def sse_event(event_type: str, data: dict) -> str:
@@ -92,7 +93,7 @@ class SSEStreamer:
 
             yield sse_event("stage", {"stage": "retrieving_paragraphs", "message": "正在检索段落层..."})
             yield sse_event("retrieval_paragraphs", {
-                "paragraphs": [_result_to_paragraph(r) for r in paragraph_results],
+                "paragraphs": [_result_to_paragraph(r, idx) for idx, r in enumerate(paragraph_results)],
             })
             logger.info(f"Retrieval took {time.time() - t_retrieve:.3f}s")
 
@@ -163,17 +164,31 @@ class SSEStreamer:
 def _result_to_chunk(r: RetrievalResult) -> dict:
     return {
         "id": r.chunk_id,
-        "text": r.content[:200],
+        "text": normalize_extracted_text(r.content)[:200],
         "score": round(r.score, 4),
         "path": [r.section_id or "未知章节"],
     }
 
 
-def _result_to_paragraph(r: RetrievalResult) -> dict:
+def _resolve_paragraph_index(r: RetrievalResult, fallback_index: int) -> int:
+    if isinstance(r.paragraph_index, int):
+        return r.paragraph_index
+
+    meta_index = r.metadata.get("paragraph_index") if isinstance(r.metadata, dict) else None
+    if isinstance(meta_index, int):
+        return meta_index
+
+    # Retrieval may not provide a document-level paragraph index; fallback to
+    # a 1-based rank within the current retrieval result list.
+    return fallback_index + 1
+
+
+def _result_to_paragraph(r: RetrievalResult, fallback_index: int) -> dict:
     return {
         "id": r.chunk_id,
         "node_id": r.section_id,
         "page": r.page,
-        "index": 0,
-        "text": r.content[:200],
+        "index": _resolve_paragraph_index(r, fallback_index),
+        "text": normalize_extracted_text(r.content)[:200],
+        "score": round(r.score, 4),
     }

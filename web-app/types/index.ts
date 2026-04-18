@@ -1,4 +1,4 @@
-import type { RagCitation, RetrievalPathStep } from "@/types/rag";
+import type { ParagraphItem, RagCitation, RetrievalPathStep } from "@/types/rag";
 
 export type DocumentStatus = "UPLOADING" | "PARSING" | "INDEXED" | "FAILED";
 
@@ -9,7 +9,9 @@ export interface Document {
   size: number;
   mimeType: string;
   status: DocumentStatus;
+  ragDocumentId?: string | null;
   structureTree?: unknown;
+  paragraphs?: ParagraphItem[];
   pageCount?: number | null;
   createdAt: string;
   updatedAt?: string;

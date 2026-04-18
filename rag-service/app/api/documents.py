@@ -27,6 +27,7 @@ from app.models import (
 
 from app.parsing import PDFParser, MarkdownParser, TextParser
 from app.parsing.base import ParsingStrategy
+from app.text_normalization import normalize_extracted_text
 
 
 # ==================== 路由实例 ====================
@@ -74,23 +75,6 @@ async def parse_document(file: UploadFile = File(...)) -> ParseResponse:
     try:
         parser = ParserFactory.get_parser(file.filename or "")
 
-        # 流式读取
-        contents = []
-        max_size = settings.max_file_size
-        total_size = 0
-
-        while chunk := await file.read(1024 * 1024):
-            total_size += len(chunk)
-            if total_size > max_size:
-                raise ParseException(
-                    code="FILE_TOO_LARGE",
-                    message=f"File exceeds maximum size: {max_size / 1024 / 1024}MB",
-                )
-            contents.append(chunk)
-
-        if not contents:
-            raise ParseException(code="EMPTY_FILE", message="Empty file uploaded")
-
         ext = Path(file.filename).suffix.lower()
         if ext not in parser.supported_formats:
             raise ParseException(
@@ -98,15 +82,38 @@ async def parse_document(file: UploadFile = File(...)) -> ParseResponse:
                 message=f"Format not supported: {ext}",
             )
 
-        # 保存文件
+        # 保存文件（边读边写，避免大文件堆积在内存）
         upload_dir = Path(settings.upload_dir)
         upload_dir.mkdir(parents=True, exist_ok=True)
         file_path = upload_dir / f"{doc_id}{ext}"
 
-        file_content = b"".join(contents)
-        file_path.write_bytes(file_content)
+        max_size = settings.max_file_size
+        total_size = 0
+        has_content = False
 
-        logger.info(f"File saved: {file_path}, size={len(file_content)} bytes")
+        try:
+            with file_path.open("wb") as output_file:
+                while chunk := await file.read(1024 * 1024):
+                    has_content = True
+                    total_size += len(chunk)
+                    if total_size > max_size:
+                        raise ParseException(
+                            code="FILE_TOO_LARGE",
+                            message=f"File exceeds maximum size: {max_size / 1024 / 1024}MB",
+                            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                        )
+                    output_file.write(chunk)
+        except ParseException:
+            if file_path.exists():
+                file_path.unlink(missing_ok=True)
+            raise
+
+        if not has_content:
+            if file_path.exists():
+                file_path.unlink(missing_ok=True)
+            raise ParseException(code="EMPTY_FILE", message="Empty file uploaded")
+
+        logger.info(f"File saved: {file_path}, size={total_size} bytes")
 
         # 解析
         result = await parser.parse(file_path)
@@ -347,10 +354,15 @@ async def get_document_paragraphs(
         # 转换为响应模型
         items = []
         for para in paragraphs[offset:offset + limit]:
+            normalized_content = normalize_extracted_text(para["content"])
             items.append(
                 ParagraphItem(
                     id=para["id"],
-                    content=para["content"][:200] + "..." if len(para["content"]) > 200 else para["content"],
+                    content=(
+                        normalized_content[:200] + "..."
+                        if len(normalized_content) > 200
+                        else normalized_content
+                    ),
                     page=para.get("page_numbers", [1])[0] if para.get("page_numbers") else 1,
                     position=para["position"],
                     section_id=para.get("section_id"),

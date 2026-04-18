@@ -66,7 +66,7 @@ class Settings(BaseSettings):
 
     # File
     upload_dir: str = "./uploads"
-    max_file_size: int = 100 * 1024 * 1024
+    max_file_size: int = 200 * 1024 * 1024
     allowed_extensions: list[str] = [".pdf", ".md", ".txt"]
 
     # Indexing

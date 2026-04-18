@@ -4,6 +4,7 @@ from typing import Optional
 
 from app.retrieval.base import RetrievalResult
 from app.core.database import get_sections
+from app.text_normalization import normalize_extracted_text
 
 
 async def extract_citations(
@@ -39,9 +40,10 @@ async def extract_citations(
         citation = {
             "id": len(citations) + 1,
             "paragraph_id": chunk.chunk_id,
-            "text": chunk.content[:200],
+            "text": normalize_extracted_text(chunk.content)[:200],
             "path": path,
             "score": round(chunk.score, 4),
+            "page": chunk.page,
         }
 
         if chunk.metadata.get("document_id"):

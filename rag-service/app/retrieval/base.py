@@ -10,6 +10,7 @@ class RetrievalResult(BaseModel):
     content: str
     score: float
     page: Optional[int] = None
+    paragraph_index: Optional[int] = None
     section_id: Optional[str] = None
     chunk_type: str = "paragraph"
     granularity: str = "detail"

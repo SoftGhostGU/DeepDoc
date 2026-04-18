@@ -223,6 +223,10 @@ export const useChatStore = create<ChatStore>((set, get) => ({
         ...state.activeSessionIdByDocument,
         [documentId]: sessionId,
       },
+      currentStage: null,
+      stageTimestamps: {},
+      retrievedChunks: [],
+      retrievedParagraphs: [],
     }));
   },
 

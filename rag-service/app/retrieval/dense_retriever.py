@@ -74,6 +74,7 @@ class DenseRetriever(RetrieverBase):
                     content=chunk.get("content", ""),
                     score=float(hit["score"]),
                     page=page_num,
+                    paragraph_index=chunk.get("position"),
                     section_id=chunk.get("section_id"),
                     chunk_type=chunk.get("chunk_type", "paragraph"),
                     granularity=chunk.get("granularity", "detail"),

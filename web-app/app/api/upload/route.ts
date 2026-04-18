@@ -1,5 +1,8 @@
 import path from "node:path";
-import { mkdir, writeFile } from "node:fs/promises";
+import { createWriteStream } from "node:fs";
+import { mkdir, unlink } from "node:fs/promises";
+import { Readable } from "node:stream";
+import { pipeline } from "node:stream/promises";
 
 import { NextResponse } from "next/server";
 import type { Prisma } from "@prisma/client";
@@ -13,9 +16,14 @@ import { setDocumentRagDocumentId } from "@/lib/rag-sync-store";
 export const runtime = "nodejs";
 
 const UPLOAD_DIR = path.join(process.cwd(), "public", "uploads");
+const MAX_UPLOAD_BYTES = 200 * 1024 * 1024;
 
 function sanitizeFilename(fileName: string) {
   return fileName.replace(/[^a-zA-Z0-9._-]/g, "_");
+}
+
+function formatFileSize(sizeInBytes: number) {
+  return `${(sizeInBytes / (1024 * 1024)).toFixed(1)}MB`;
 }
 
 export async function POST(request: Request) {
@@ -29,13 +37,34 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Missing file" }, { status: 400 });
     }
 
+    if (file.size > MAX_UPLOAD_BYTES) {
+      return NextResponse.json(
+        {
+          error: "File too large",
+          detail: `File exceeds maximum size: ${formatFileSize(MAX_UPLOAD_BYTES)}`,
+        },
+        { status: 413 },
+      );
+    }
+
     const safeOriginalName = sanitizeFilename(file.name);
     const storedName = `${Date.now()}-${safeOriginalName}`;
+    const destination = path.join(UPLOAD_DIR, storedName);
 
     await mkdir(UPLOAD_DIR, { recursive: true });
-    const arrayBuffer = await file.arrayBuffer();
-    const destination = path.join(UPLOAD_DIR, storedName);
-    await writeFile(destination, Buffer.from(arrayBuffer));
+    try {
+      const source = Readable.fromWeb(
+        file.stream() as unknown as Parameters<typeof Readable.fromWeb>[0],
+      );
+      const sink = createWriteStream(destination, { flags: "wx" });
+      await pipeline(source, sink);
+    } catch (writeError) {
+      const code = (writeError as NodeJS.ErrnoException).code;
+      if (code !== "EEXIST") {
+        await unlink(destination).catch(() => undefined);
+      }
+      throw writeError;
+    }
 
     const createdDocument = await prisma.document.create({
       data: {
