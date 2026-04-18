@@ -10,7 +10,7 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { buildMockParseResponse } from "@/lib/mock/data";
 import { forwardJsonToRag, forwardMultipartToRag, isMockMode } from "@/lib/rag-client";
-import { parseAndIndexDocument, RagUploadError } from "@/lib/rag-upload";
+import { indexParsedDocument, parseDocumentThroughRag, RagUploadError } from "@/lib/rag-upload";
 import { setDocumentRagDocumentId } from "@/lib/rag-sync-store";
 
 export const runtime = "nodejs";
@@ -96,9 +96,21 @@ export async function POST(request: Request) {
       });
     }
 
-    const { ragDocumentId, parsePayload } = await parseAndIndexDocument({
+    const { ragDocumentId, parsePayload } = await parseDocumentThroughRag({
       file,
       forwardMultipartToRag,
+    });
+    await setDocumentRagDocumentId(prisma, createdDocument.id, ragDocumentId);
+    await prisma.document.update({
+      where: { id: createdDocument.id },
+      data: {
+        structureTree: (parsePayload.structure_tree ?? null) as unknown as Prisma.InputJsonValue,
+        pageCount: parsePayload.stats?.page_count,
+      },
+    });
+
+    await indexParsedDocument({
+      ragDocumentId,
       forwardJsonToRag,
     });
 
@@ -110,7 +122,6 @@ export async function POST(request: Request) {
         pageCount: parsePayload.stats?.page_count,
       },
     });
-    await setDocumentRagDocumentId(prisma, createdDocument.id, ragDocumentId);
 
     return NextResponse.json({
       document: updatedDocument,
@@ -120,15 +131,28 @@ export async function POST(request: Request) {
   } catch (error) {
     if (error instanceof RagUploadError) {
       if (createdDocumentId) {
+        if (error.ragDocumentId) {
+          await setDocumentRagDocumentId(prisma, createdDocumentId, error.ragDocumentId);
+        }
+
         await prisma.document.update({
           where: { id: createdDocumentId },
-          data: { status: "FAILED" },
+          data: {
+            status: "FAILED",
+            ...(error.parsePayload
+              ? {
+                  structureTree: (error.parsePayload.structure_tree ?? null) as unknown as Prisma.InputJsonValue,
+                  pageCount: error.parsePayload.stats?.page_count,
+                }
+              : {}),
+          },
         });
       }
 
       return NextResponse.json(
         {
-          error: `RAG ${error.stage} failed`,
+          error: error.message,
+          code: error.code,
           detail: error.detail,
         },
         { status: error.status },

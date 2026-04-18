@@ -14,11 +14,13 @@ import {
 import "@xyflow/react/dist/style.css";
 
 import { SectionNodeMemo, type SectionNodeData } from "@/components/rag/flow-nodes";
+import { getMindmapHighlightIds } from "@/lib/utils/retrieval-payload";
 import type { DocumentTreeNode, RetrievedChunk } from "@/types/rag";
 
 interface DocumentMindmapProps {
   tree: DocumentTreeNode | null;
   retrievedChunks?: RetrievedChunk[];
+  activeDocumentId?: string | null;
 }
 
 const nodeTypes = { section: SectionNodeMemo };
@@ -131,21 +133,17 @@ function layoutTree(nodes: Node[], edges: Edge[]): { nodes: Node[]; edges: Edge[
   };
 }
 
-export function DocumentMindmap({ tree, retrievedChunks = [] }: DocumentMindmapProps) {
+export function DocumentMindmap({
+  tree,
+  retrievedChunks = [],
+  activeDocumentId,
+}: DocumentMindmapProps) {
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
 
-  const highlightedIds = useMemo(() => {
-    const ids = new Set<string>();
-    for (const chunk of retrievedChunks) {
-      if (!chunk.path) {
-        continue;
-      }
-      for (const segment of chunk.path) {
-        ids.add(segment);
-      }
-    }
-    return ids;
-  }, [retrievedChunks]);
+  const highlightedIds = useMemo(
+    () => getMindmapHighlightIds(retrievedChunks, activeDocumentId),
+    [activeDocumentId, retrievedChunks],
+  );
 
   const { nodes: rawNodes, edges: rawEdges } = useMemo(() => {
     if (!tree) {
@@ -186,7 +184,7 @@ export function DocumentMindmap({ tree, retrievedChunks = [] }: DocumentMindmapP
   if (!tree) {
     return (
       <div className="flex h-full min-h-0 w-full items-center justify-center">
-        <p className="text-sm text-[var(--foreground-dim)]">该文档未产出结构树</p>
+        <p className="text-sm text-[var(--foreground-dim)]">该文档尚未产生结构树</p>
       </div>
     );
   }

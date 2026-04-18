@@ -7,7 +7,7 @@ from typing import Optional
 
 from app.core import get_settings, logger
 from app.core.database import (
-    delete_chunks,
+    delete_index_chunks,
     get_chunks as db_get_chunks,
     get_document,
     get_sections,
@@ -57,7 +57,7 @@ class IndexBuilder:
             raise ValueError(f"Document not found: {doc_id}")
 
         sections = await get_sections(doc_id)
-        paragraphs = await db_get_chunks(doc_id, chunk_type="paragraph")
+        paragraphs = await db_get_chunks(doc_id, chunk_type="paragraph", granularity="paragraph")
 
         section_objs = self._build_sections(sections, paragraphs)
         para_objs = self._build_paragraphs(paragraphs)
@@ -72,12 +72,16 @@ class IndexBuilder:
                 logger.warning(f"Unknown strategy: {strategy}, skipping")
                 continue
 
-            deleted = await delete_chunks(doc_id)
-            await qdrant.delete_document_chunks(doc_id)
-            logger.info(f"Deleted {deleted} old chunks from SQLite and Qdrant")
-
             result = await chunker.chunk(section_objs, para_objs, doc_id)
-            await self._embed_and_save(result.chunks, doc_id)
+            sqlite_chunks, qdrant_chunks = await self._prepare_index_chunks(result.chunks, doc_id)
+
+            await qdrant.replace_document_chunks(doc_id, qdrant_chunks)
+            deleted = await delete_index_chunks(doc_id)
+            if sqlite_chunks:
+                await save_chunks(sqlite_chunks)
+            logger.info(
+                f"Replaced {deleted} old indexed chunks and saved {len(sqlite_chunks)} new chunks for doc_id={doc_id}"
+            )
 
             stats = IndexStats(
                 total_chunks=result.chunk_count,
@@ -125,16 +129,15 @@ class IndexBuilder:
             build_time=time.time() - start_time,
         )
 
-    async def _embed_and_save(self, chunks: list[Chunk], doc_id: str) -> None:
-        if not chunks:
-            return
-
-        embed_service = await get_embedding_service()
-        qdrant = await get_qdrant_service()
-
-        batch_size = self.settings.embedding_batch_size or 32
+    async def _prepare_index_chunks(self, chunks: list[Chunk], doc_id: str) -> tuple[list[dict], list[dict]]:
         sqlite_chunks: list[dict] = []
         qdrant_chunks: list[dict] = []
+
+        if not chunks:
+            return sqlite_chunks, qdrant_chunks
+
+        embed_service = await get_embedding_service()
+        batch_size = self.settings.embedding_batch_size or 32
 
         for i in range(0, len(chunks), batch_size):
             batch = chunks[i : i + batch_size]
@@ -179,12 +182,7 @@ class IndexBuilder:
                     }
                 )
 
-        await save_chunks(sqlite_chunks)
-        await qdrant.upsert_chunks(qdrant_chunks)
-
-        logger.info(
-            f"Saved {len(sqlite_chunks)} chunk rows and {len(qdrant_chunks)} vectors for doc_id={doc_id}"
-        )
+        return sqlite_chunks, qdrant_chunks
 
     def _build_sections(self, sections_data: list[dict], paragraphs_data: list[dict]) -> list:
         from app.models import Paragraph, Section

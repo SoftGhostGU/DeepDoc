@@ -40,6 +40,10 @@ export interface ParagraphItem {
   index: number;
   text: string;
   score?: number;
+  documentId?: string;
+  documentName?: string;
+  sectionKey?: string;
+  sectionTitle?: string;
 }
 
 export interface ParagraphList {
@@ -87,6 +91,11 @@ export interface RetrievedChunk {
   text: string;
   score: number;
   path: string[];
+  sectionId?: string;
+  documentId?: string;
+  documentName?: string;
+  sectionKey?: string;
+  sectionTitle?: string;
 }
 
 export interface RetrieveResponse {

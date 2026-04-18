@@ -207,14 +207,21 @@ async def build_index(doc_id: str, request: IndexRequest) -> IndexResponse:
         logger.info(f"Index built for document: {doc_id}")
         return response
 
+    except AppException:
+        raise
     except ValueError as e:
-        raise AppException(code="DOCUMENT_NOT_FOUND", message=str(e))
+        raise AppException(
+            code="DOCUMENT_NOT_FOUND",
+            message=str(e),
+            status_code=status.HTTP_404_NOT_FOUND,
+        )
     except Exception as e:
         logger.exception("Failed to build index")
         raise AppException(
             code="INDEX_ERROR",
             message="Index building failed",
             detail=str(e),
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
 
 
@@ -341,7 +348,7 @@ async def get_document_paragraphs(
             )
 
         # 获取段落（从 chunks 表读取 paragraph 类型）
-        paragraphs = await get_chunks(doc_id, chunk_type="paragraph")
+        paragraphs = await get_chunks(doc_id, chunk_type="paragraph", granularity="paragraph")
 
         if not paragraphs:
             return ParagraphsResponse(

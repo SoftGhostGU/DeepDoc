@@ -1,9 +1,10 @@
-"""引用标注提取"""
+"""Citation extraction helpers."""
+
 import re
 from typing import Optional
 
-from app.retrieval.base import RetrievalResult
 from app.core.database import get_sections
+from app.retrieval.base import RetrievalResult
 from app.text_normalization import normalize_extracted_text
 
 
@@ -12,14 +13,11 @@ async def extract_citations(
     context_chunks: list[RetrievalResult],
     doc_id: Optional[str] = None,
 ) -> list[dict]:
-    refs = re.findall(r'\[(\d+)\]', answer_text)
+    refs = re.findall(r"\[(\d+)\]", answer_text)
     if not refs:
         return []
 
-    sections_map = {}
-    if doc_id:
-        sections = await get_sections(doc_id)
-        sections_map = {s["id"]: s for s in sections}
+    sections_by_doc = await _load_sections_by_doc(context_chunks, fallback_doc_id=doc_id)
 
     citations = []
     seen_ids = set()
@@ -34,7 +32,8 @@ async def extract_citations(
             continue
         seen_ids.add(chunk.chunk_id)
 
-        section = sections_map.get(chunk.section_id or "", {})
+        chunk_doc_id = _get_chunk_document_id(chunk, fallback_doc_id=doc_id)
+        section = sections_by_doc.get(chunk_doc_id or "", {}).get(chunk.section_id or "", {})
         path = _build_path(chunk, section)
 
         citation = {
@@ -58,8 +57,43 @@ async def extract_citations(
 
 def _build_path(chunk: RetrievalResult, section: dict) -> list[str]:
     path = []
-    if section:
-        if section.get("title"):
-            path.append(section["title"])
+    if section and section.get("title"):
+        path.append(section["title"])
     path.append(f"段落 {chunk.chunk_id}")
     return path
+
+
+def _get_chunk_document_id(
+    chunk: RetrievalResult,
+    fallback_doc_id: Optional[str] = None,
+) -> Optional[str]:
+    if isinstance(chunk.metadata, dict):
+        metadata_doc_id = chunk.metadata.get("document_id")
+        if isinstance(metadata_doc_id, str) and metadata_doc_id.strip():
+            return metadata_doc_id
+    return fallback_doc_id
+
+
+async def _load_sections_by_doc(
+    context_chunks: list[RetrievalResult],
+    fallback_doc_id: Optional[str] = None,
+) -> dict[str, dict[str, dict]]:
+    doc_ids: list[str] = []
+    seen: set[str] = set()
+
+    for chunk in context_chunks:
+        chunk_doc_id = _get_chunk_document_id(chunk, fallback_doc_id=fallback_doc_id)
+        if not chunk_doc_id or chunk_doc_id in seen:
+            continue
+        seen.add(chunk_doc_id)
+        doc_ids.append(chunk_doc_id)
+
+    if fallback_doc_id and fallback_doc_id not in seen:
+        doc_ids.append(fallback_doc_id)
+
+    sections_by_doc: dict[str, dict[str, dict]] = {}
+    for current_doc_id in doc_ids:
+        sections = await get_sections(current_doc_id)
+        sections_by_doc[current_doc_id] = {section["id"]: section for section in sections}
+
+    return sections_by_doc

@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import ReactECharts from "echarts-for-react";
 
+import { formatParagraphGroupLabel, getParagraphGroupKey } from "@/lib/utils/retrieval-payload";
 import type { ParagraphItem } from "@/types/rag";
 
 interface DocumentHeatmapProps {
@@ -29,16 +30,16 @@ function scoreToColorNormalized(score: number, minScore: number, maxScore: numbe
 
 export function DocumentHeatmap({
   retrievedParagraphs,
-  sectionTitleMap,
+  sectionTitleMap = new Map(),
   hasQuery = false,
   onParagraphClick,
 }: DocumentHeatmapProps) {
   const sectionGroups = useMemo(() => {
     const groups = new Map<string, ParagraphItem[]>();
-    for (const para of retrievedParagraphs) {
-      const key = para.node_id ?? "unknown";
+    for (const paragraph of retrievedParagraphs) {
+      const key = getParagraphGroupKey(paragraph);
       const list = groups.get(key) ?? [];
-      list.push(para);
+      list.push(paragraph);
       groups.set(key, list);
     }
     return groups;
@@ -62,19 +63,20 @@ export function DocumentHeatmap({
   }, [retrievedParagraphs]);
 
   const option = useMemo(() => {
-    const data = Array.from(sectionGroups.entries()).map(([sectionId, paras]) => ({
-      name: sectionTitleMap?.get(sectionId) ?? "未分类",
-      children: paras.map((para) => {
-        const score = para.score ?? 0;
+    const data = Array.from(sectionGroups.entries()).map(([groupKey, paragraphs]) => ({
+      name: formatParagraphGroupLabel(paragraphs[0]!, sectionTitleMap),
+      children: paragraphs.map((paragraph) => {
+        const score = paragraph.score ?? 0;
         return {
-          name: `段落 ${para.index}`,
+          name: `段落 ${paragraph.index}`,
           value: score * 100 + MIN_BASELINE,
-          paraId: para.id,
-          text: para.text,
+          paraId: paragraph.id,
+          text: paragraph.text,
           score,
-          sectionPath: para.node_id ?? "",
-          sectionTitle: sectionTitleMap?.get(sectionId) ?? "未分类",
-          paraIndex: para.index,
+          sectionPath: paragraph.node_id ?? "",
+          sectionTitle: formatParagraphGroupLabel(paragraph, sectionTitleMap),
+          paraIndex: paragraph.index,
+          groupKey,
           itemStyle: {
             color: scoreToColorNormalized(score, scoreRange.min, scoreRange.max, scoreRange.count),
             borderColor: "#18181b",

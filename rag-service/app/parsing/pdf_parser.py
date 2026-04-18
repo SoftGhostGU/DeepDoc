@@ -1,36 +1,30 @@
-"""PDF 解析器 - 使用 PyMuPDF (fitz)"""
+"""PDF parser using PyMuPDF."""
+
 import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
-import fitz  # PyMuPDF
+import fitz
 
 from app.core import logger
-from app.models import (
-    DocumentStructure,
-    Paragraph,
-    Section,
-    SectionTreeNode,
-)
+from app.models import DocumentStructure, Paragraph, Section, SectionTreeNode
 from app.parsing.base import ParseResult, ParsingStrategy
 from app.text_normalization import normalize_extracted_text
 
 
 @dataclass
 class HeadingBlock:
-    """标题块"""
     text: str
     level: int
     page: int
-    y: float  # Y 坐标用于排序
+    y: float
     font_size: float = 0
     is_bold: bool = False
 
 
 @dataclass
 class TextBlock:
-    """文本块"""
     text: str
     page: int
     y: float
@@ -40,17 +34,9 @@ class TextBlock:
 
 
 class PDFParser(ParsingStrategy):
-    """PDF 文档解析器
-
-    核心功能：
-    1. 使用 PyMuPDF 提取文本和坐标
-    2. 根据字体大小/加粗/TOC 识别章节标题
-    3. 重构为树形章节结构
-    """
-
     def __init__(
         self,
-        title_font_sizes: tuple = (18, 16, 14, 12),  # H1-H4 预期字号
+        title_font_sizes: tuple = (18, 16, 14, 12),
         min_title_length: int = 3,
         max_title_length: int = 200,
     ):
@@ -63,22 +49,15 @@ class PDFParser(ParsingStrategy):
         return [".pdf"]
 
     async def parse(self, file_path: Path) -> ParseResult:
-        """解析 PDF 文件"""
         try:
             self.validate_file(file_path)
             logger.info(f"Parsing PDF: {file_path}")
 
-            # 打开 PDF
             doc = fitz.open(file_path)
-
-            # 提取标题块和文本块
             heading_blocks = self._extract_headings(doc)
             text_blocks = self._extract_text_blocks(doc)
-
-            # 构建章节树
             sections, paragraphs = self._build_structure(heading_blocks, text_blocks, doc.page_count)
 
-            # 创建文档结构
             structure = DocumentStructure(
                 doc_id=file_path.stem,
                 title=self._extract_title(doc),
@@ -97,8 +76,7 @@ class PDFParser(ParsingStrategy):
             )
 
             return ParseResult(structure=structure, success=True)
-
-        except Exception as e:
+        except Exception as exc:
             logger.exception(f"Failed to parse PDF: {file_path}")
             return ParseResult(
                 structure=DocumentStructure(
@@ -107,30 +85,26 @@ class PDFParser(ParsingStrategy):
                     page_count=0,
                 ),
                 success=False,
-                error_message=str(e),
+                error_message=str(exc),
             )
 
     def _extract_title(self, doc: fitz.Document) -> str:
-        """提取文档标题"""
-        # 从元数据获取
         metadata = doc.metadata
         if metadata.get("title"):
             return normalize_extracted_text(metadata["title"])
 
-        # 从第一页提取
         if doc.page_count > 0:
             page = doc[0]
             text = page.get_text("text")
             lines = text.split("\n")
             for line in lines[:5]:
-                line = line.strip()
-                if line and len(line) < 100:
-                    return normalize_extracted_text(line)[:100]
+                stripped = line.strip()
+                if stripped and len(stripped) < 100:
+                    return normalize_extracted_text(stripped)[:100]
 
         return doc.filename or "Untitled"
 
     def _extract_headings(self, doc: fitz.Document) -> list[HeadingBlock]:
-        """提取标题块"""
         headings: list[HeadingBlock] = []
 
         for page_num, page in enumerate(doc):
@@ -168,39 +142,30 @@ class PDFParser(ParsingStrategy):
         return headings
 
     def _is_title(self, text: str, font_size: float, is_bold: bool) -> bool:
-        """判断是否为标题"""
         if not text or len(text) < self.min_title_length:
             return False
         if len(text) > self.max_title_length:
             return False
 
-        # 排除页码
         if re.match(r"^\d+(\.\d+)*$", text):
             return False
-        if re.match(r"^第\d+页$", text):
+        if re.match(r"^第\d+页?$", text):
             return False
 
-        # 字体大小检查
         if font_size >= self.title_font_sizes[0]:
             return True
         if font_size >= self.title_font_sizes[1] and is_bold:
             return True
 
-        # 章节模式匹配
         chapter_patterns = [
-            r"^第[一二三四五六七八九十\d]+[章节篇部卷]\s*",
+            r"^第[一二三四五六七八九十\d]+[章节篇部分卷]\s*",
             r"^[0-9]+\.\s*",
             r"^[A-Z]\.\s*",
             r"^第\d+节\s*",
         ]
-        for pattern in chapter_patterns:
-            if re.match(pattern, text):
-                return True
-
-        return False
+        return any(re.match(pattern, text) for pattern in chapter_patterns)
 
     def _detect_title_level(self, font_size: float, is_bold: bool) -> int:
-        """检测标题级别"""
         if font_size >= 24:
             return 1
         if font_size >= self.title_font_sizes[0]:
@@ -214,7 +179,6 @@ class PDFParser(ParsingStrategy):
         return 5
 
     def _extract_text_blocks(self, doc: fitz.Document) -> list[TextBlock]:
-        """提取文本块"""
         blocks: list[TextBlock] = []
 
         for page_num, page in enumerate(doc):
@@ -238,7 +202,6 @@ class PDFParser(ParsingStrategy):
                 if not text:
                     continue
 
-                # 跳过标题
                 if last_span and self._is_title(
                     text,
                     last_span.get("size", 0),
@@ -265,14 +228,12 @@ class PDFParser(ParsingStrategy):
         text_blocks: list[TextBlock],
         page_count: int,
     ) -> tuple[list[Section], list[Paragraph]]:
-        """构建文档结构"""
         sections: list[Section] = []
         paragraphs: list[Paragraph] = []
 
         if not headings:
-            # 无标题：按段落切分
             for idx, block in enumerate(text_blocks):
-                para = Paragraph(
+                paragraph = Paragraph(
                     id=f"p_{idx + 1}",
                     content=block.text,
                     page=block.page,
@@ -284,7 +245,7 @@ class PDFParser(ParsingStrategy):
                     char_count=len(block.text),
                     word_count=len(block.text.split()),
                 )
-                paragraphs.append(para)
+                paragraphs.append(paragraph)
 
             if paragraphs:
                 sections.append(
@@ -299,91 +260,109 @@ class PDFParser(ParsingStrategy):
                 )
             return sections, paragraphs
 
-        # 按标题分组
-        current_section: Optional[Section] = None
-        section_paragraphs: list[Paragraph] = []
+        ordered_headings = sorted(headings, key=lambda heading: (heading.page, heading.y))
+        ordered_blocks = sorted(text_blocks, key=lambda block: (block.page, block.y, block.x))
+
+        sections = self._build_sections_from_headings(ordered_headings)
+        front_matter: Optional[Section] = None
         para_idx = 0
-        last_page = 1
+        heading_index = 0
+        current_section: Optional[Section] = None
 
-        for heading in headings:
-            # 保存前一个章节
-            if current_section and section_paragraphs:
-                current_section.paragraphs = section_paragraphs[:]
-                current_section.end_page = section_paragraphs[-1].page
+        for block in ordered_blocks:
+            while heading_index < len(ordered_headings) and self._heading_precedes_block(
+                ordered_headings[heading_index],
+                block,
+            ):
+                current_section = sections[heading_index]
+                heading_index += 1
 
-            section_paragraphs = []
+            target_section = current_section
+            if target_section is None:
+                if front_matter is None:
+                    front_matter = Section(
+                        id="sec_front_matter",
+                        title="前置内容",
+                        level=1,
+                        start_page=block.page,
+                        end_page=block.page,
+                        paragraphs=[],
+                    )
+                target_section = front_matter
 
-            # 收集该标题下的段落
-            for block in text_blocks:
-                if block.page < heading.page:
-                    continue
-                if block.page == heading.page and block.y <= heading.y:
-                    continue
-                if block.page > heading.page and section_paragraphs:
-                    last_page = block.page
-                    break
+            paragraph = Paragraph(
+                id=f"p_{para_idx + 1}",
+                content=block.text,
+                page=block.page,
+                position=para_idx,
+                section_id=target_section.id,
+                x=block.x,
+                y=block.y,
+                width=block.width,
+                height=block.height,
+                char_count=len(block.text),
+                word_count=len(block.text.split()),
+            )
+            target_section.paragraphs.append(paragraph)
+            target_section.end_page = max(target_section.end_page, block.page)
+            paragraphs.append(paragraph)
+            para_idx += 1
 
-                para = Paragraph(
-                    id=f"p_{para_idx + 1}",
-                    content=block.text,
-                    page=block.page,
-                    position=para_idx,
-                    section_id=f"sec_{len(sections) + 1}",
-                    x=block.x,
-                    y=block.y,
-                    width=block.width,
-                    height=block.height,
-                    char_count=len(block.text),
-                    word_count=len(block.text.split()),
-                )
-                section_paragraphs.append(para)
-                paragraphs.append(para)
-                para_idx += 1
+        if front_matter is not None:
+            sections.insert(0, front_matter)
 
-            # 创建章节
+        self._finalize_section_ranges(sections)
+        return sections, paragraphs
+
+    def _build_sections_from_headings(self, headings: list[HeadingBlock]) -> list[Section]:
+        sections: list[Section] = []
+        parent_stack: list[Section] = []
+
+        for index, heading in enumerate(headings, start=1):
             section = Section(
-                id=f"sec_{len(sections) + 1}",
+                id=f"sec_{index}",
                 title=heading.text,
                 level=heading.level,
                 start_page=heading.page,
                 end_page=heading.page,
-                paragraphs=section_paragraphs[:],
+                paragraphs=[],
             )
 
-            # 父子��系
-            if sections and heading.level > sections[-1].level:
-                section.parent_id = sections[-1].id
-                sections[-1].children.append(section)
+            while parent_stack and parent_stack[-1].level >= heading.level:
+                parent_stack.pop()
 
+            if parent_stack:
+                section.parent_id = parent_stack[-1].id
+                parent_stack[-1].children.append(section)
+
+            parent_stack.append(section)
             sections.append(section)
-            current_section = section
 
-        # 最后一个章节的后续段落
-        if current_section:
-            remaining = [b for b in text_blocks if b.page >= headings[-1].page]
-            for block in remaining:
-                para = Paragraph(
-                    id=f"p_{para_idx + 1}",
-                    content=block.text,
-                    page=block.page,
-                    position=para_idx,
-                    section_id=current_section.id,
-                    x=block.x,
-                    y=block.y,
-                    width=block.width,
-                    height=block.height,
-                    char_count=len(block.text),
-                    word_count=len(block.text.split()),
-                )
-                current_section.paragraphs.append(para)
-                paragraphs.append(para)
-                para_idx += 1
-                current_section.end_page = block.page
+        return sections
 
-        return sections, paragraphs
+    def _heading_precedes_block(self, heading: HeadingBlock, block: TextBlock) -> bool:
+        return heading.page < block.page or (
+            heading.page == block.page and heading.y < block.y
+        )
+
+    def _finalize_section_ranges(self, sections: list[Section]) -> None:
+        def section_end_page(section: Section) -> int:
+            direct_pages = [paragraph.page for paragraph in section.paragraphs]
+            child_pages = [
+                section_end_page(candidate)
+                for candidate in sections
+                if candidate.parent_id == section.id
+            ]
+            section.end_page = max(
+                [section.start_page, section.end_page, *direct_pages, *child_pages]
+            )
+            return section.end_page
+
+        for section in sections:
+            if section.parent_id is None:
+                section_end_page(section)
 
     def _build_tree_node(self, sections: list[Section]) -> SectionTreeNode:
-        """构建树节点"""
         if not sections:
             return SectionTreeNode(
                 id="root",
@@ -397,21 +376,25 @@ class PDFParser(ParsingStrategy):
             title="Document",
             level=0,
             page_range=f"1-{sections[-1].end_page}",
-            paragraph_count=sum(len(s.paragraphs) for s in sections),
+            paragraph_count=sum(len(section.paragraphs) for section in sections),
         )
 
         def build_children(parent_id: Optional[str]) -> list[SectionTreeNode]:
             children = []
-            for sec in sections:
-                if sec.parent_id == parent_id:
+            for section in sections:
+                if section.parent_id == parent_id:
                     node = SectionTreeNode(
-                        id=sec.id,
-                        title=sec.title,
-                        level=sec.level,
-                        page_range=f"{sec.start_page}-{sec.end_page}" if sec.start_page != sec.end_page else str(sec.start_page),
-                        summary=sec.summary,
-                        paragraph_count=len(sec.paragraphs),
-                        children=build_children(sec.id),
+                        id=section.id,
+                        title=section.title,
+                        level=section.level,
+                        page_range=(
+                            f"{section.start_page}-{section.end_page}"
+                            if section.start_page != section.end_page
+                            else str(section.start_page)
+                        ),
+                        summary=section.summary,
+                        paragraph_count=len(section.paragraphs),
+                        children=build_children(section.id),
                     )
                     children.append(node)
             return children

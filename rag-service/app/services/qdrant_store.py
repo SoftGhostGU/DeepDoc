@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 from typing import Optional
 
@@ -35,6 +36,7 @@ class QdrantStore:
         self.collection_name = self.settings.qdrant_collection
         self._client: Optional[AsyncQdrantClient] = None
         self._collection_ready = False
+        self._write_lock = asyncio.Lock()
 
     @classmethod
     async def get_instance(cls) -> "QdrantStore":
@@ -82,6 +84,36 @@ class QdrantStore:
     async def delete_document_chunks(self, doc_id: str) -> None:
         await self._ensure_collection()
         client = await self._get_client()
+        async with self._write_lock:
+            await self._delete_document_chunks(client, doc_id)
+
+    async def upsert_chunks(self, chunks: list[dict]) -> None:
+        if not chunks:
+            return
+
+        await self._ensure_collection()
+        client = await self._get_client()
+        points = self._build_points(chunks)
+        if not points:
+            return
+
+        async with self._write_lock:
+            await self._upsert_points(client, points)
+        logger.info(f"Qdrant upserted chunks: {len(points)}")
+
+    async def replace_document_chunks(self, doc_id: str, chunks: list[dict]) -> None:
+        await self._ensure_collection()
+        client = await self._get_client()
+        points = self._build_points(chunks)
+
+        async with self._write_lock:
+            await self._delete_document_chunks(client, doc_id)
+            if points:
+                await self._upsert_points(client, points)
+
+        logger.info(f"Qdrant replaced chunks: doc_id={doc_id}, count={len(points)}")
+
+    async def _delete_document_chunks(self, client: AsyncQdrantClient, doc_id: str) -> None:
         await client.delete(
             collection_name=self.collection_name,
             points_selector=models.FilterSelector(
@@ -97,13 +129,14 @@ class QdrantStore:
             wait=True,
         )
 
-    async def upsert_chunks(self, chunks: list[dict]) -> None:
-        if not chunks:
-            return
+    async def _upsert_points(self, client: AsyncQdrantClient, points: list[models.PointStruct]) -> None:
+        await client.upsert(
+            collection_name=self.collection_name,
+            points=points,
+            wait=True,
+        )
 
-        await self._ensure_collection()
-        client = await self._get_client()
-
+    def _build_points(self, chunks: list[dict]) -> list[models.PointStruct]:
         points: list[models.PointStruct] = []
         for chunk in chunks:
             vector = chunk.get("embedding")
@@ -124,16 +157,7 @@ class QdrantStore:
                     },
                 )
             )
-
-        if not points:
-            return
-
-        await client.upsert(
-            collection_name=self.collection_name,
-            points=points,
-            wait=True,
-        )
-        logger.info(f"Qdrant upserted chunks: {len(points)}")
+        return points
 
     async def search(
         self,

@@ -5,6 +5,7 @@ import { Upload, FileUp, Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
+import { parseUploadErrorResponse } from "@/lib/upload-error";
 import type { Document } from "@/types";
 
 const MAX_FILE_SIZE_BYTES = 200 * 1024 * 1024;
@@ -12,6 +13,11 @@ const ACCEPTED_EXTENSIONS = [".pdf", ".md", ".txt"];
 
 type UploadResponse = {
   document: Document;
+};
+
+type UploadUiError = {
+  message: string;
+  detail?: string;
 };
 
 interface DocumentUploadProps {
@@ -51,7 +57,7 @@ export function DocumentUpload({ compact = false, onUploaded }: DocumentUploadPr
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<UploadUiError | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   const helperText = useMemo(() => {
@@ -73,7 +79,7 @@ export function DocumentUpload({ compact = false, onUploaded }: DocumentUploadPr
 
     const validationError = validateFile(file);
     if (validationError) {
-      setError(validationError);
+      setError({ message: validationError });
       setSelectedFile(null);
       return;
     }
@@ -109,11 +115,14 @@ export function DocumentUpload({ compact = false, onUploaded }: DocumentUploadPr
           if (xhr.status >= 200 && xhr.status < 300) {
             resolve(JSON.parse(xhr.responseText) as UploadResponse);
           } else {
-            reject(new Error(`Upload failed with status ${xhr.status}`));
+            reject(parseUploadErrorResponse(xhr.status, xhr.responseText));
           }
         };
 
-        xhr.onerror = () => reject(new Error("Upload failed due to a network error"));
+        xhr.onerror = () =>
+          reject({
+            message: "Upload failed due to a network error",
+          } satisfies UploadUiError);
 
         xhr.open("POST", "/api/upload");
         xhr.send(payload);
@@ -123,7 +132,31 @@ export function DocumentUpload({ compact = false, onUploaded }: DocumentUploadPr
       setSelectedFile(null);
       setProgress(100);
     } catch (uploadError) {
-      setError(uploadError instanceof Error ? uploadError.message : "Upload failed");
+      if (uploadError instanceof Error) {
+        setError({ message: uploadError.message });
+      } else if (
+        uploadError &&
+        typeof uploadError === "object" &&
+        "error" in uploadError &&
+        typeof uploadError.error === "string"
+      ) {
+        setError({
+          message: uploadError.error,
+          detail:
+            "detail" in uploadError && typeof uploadError.detail === "string"
+              ? uploadError.detail
+              : undefined,
+        });
+      } else if (
+        uploadError &&
+        typeof uploadError === "object" &&
+        "message" in uploadError &&
+        typeof uploadError.message === "string"
+      ) {
+        setError({ message: uploadError.message });
+      } else {
+        setError({ message: "Upload failed" });
+      }
     } finally {
       setIsUploading(false);
     }
@@ -193,7 +226,12 @@ export function DocumentUpload({ compact = false, onUploaded }: DocumentUploadPr
           </div>
         )}
 
-        {error && <p className="text-xs text-[#fca5a5]">{error}</p>}
+        {error && (
+          <div className="space-y-1 text-xs text-[#fca5a5]">
+            <p>{error.message}</p>
+            {error.detail && <p className="text-[#fda4af]">{error.detail}</p>}
+          </div>
+        )}
 
         <Button onClick={upload} disabled={!selectedFile || isUploading} className="w-full">
           {isUploading ? (

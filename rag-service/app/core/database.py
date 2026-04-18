@@ -328,6 +328,17 @@ async def delete_chunks(doc_id: str) -> int:
         return cursor.rowcount
 
 
+async def delete_index_chunks(doc_id: str) -> int:
+    """Delete generated index chunks while preserving parsed source paragraphs."""
+    async with aiosqlite.connect(DATABASE_PATH) as db:
+        cursor = await db.execute(
+            "DELETE FROM chunks WHERE doc_id = ? AND granularity IN (?, ?)",
+            (doc_id, "detail", "summary"),
+        )
+        await db.commit()
+        return cursor.rowcount
+
+
 # ==================== 索引操作 ====================
 
 

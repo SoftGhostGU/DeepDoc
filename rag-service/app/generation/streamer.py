@@ -1,15 +1,17 @@
-"""SSE 事件流封装"""
+"""SSE response streaming helpers."""
+
 import json
 import time
 from typing import AsyncIterator, Optional
 
 from loguru import logger
 
+from app.core.database import get_sections
+from app.generation.citation_extractor import extract_citations
+from app.generation.generator import Generator
+from app.retrieval.base import RetrievalResult
 from app.retrieval.hierarchical import HierarchicalRetriever
 from app.retrieval.naive import NaiveRetriever
-from app.generation.generator import Generator
-from app.generation.citation_extractor import extract_citations
-from app.retrieval.base import RetrievalResult
 from app.text_normalization import normalize_extracted_text
 
 
@@ -35,7 +37,7 @@ class SSEStreamer:
             t_start = time.time()
             yield sse_event("stage", {"stage": "analyzing", "message": "正在分析问题..."})
 
-            is_multi_doc = doc_ids and len(doc_ids) > 1
+            is_multi_doc = bool(doc_ids and len(doc_ids) > 1)
             effective_query = query
             multi_queries = None
 
@@ -44,6 +46,7 @@ class SSEStreamer:
                     t_rewrite = time.time()
                     yield sse_event("stage", {"stage": "rewriting", "message": "正在使用 HyDE 改写查询..."})
                     from app.rewriting.hyde import HyDERewriter
+
                     hyde = HyDERewriter()
                     hyde_result = await hyde.rewrite(query)
                     logger.info(f"HyDE rewrite took {time.time() - t_rewrite:.3f}s")
@@ -52,8 +55,9 @@ class SSEStreamer:
 
                 if rewrite_options.get("multi_query"):
                     t_multi = time.time()
-                    yield sse_event("stage", {"stage": "rewriting", "message": "正在生成多角度查询..."})
+                    yield sse_event("stage", {"stage": "rewriting", "message": "正在生成多视角查询..."})
                     from app.rewriting.multi_query import MultiQueryRewriter
+
                     multi = MultiQueryRewriter()
                     multi_queries = await multi.rewrite(query)
                     logger.info(f"Multi-query rewrite took {time.time() - t_multi:.3f}s")
@@ -63,38 +67,64 @@ class SSEStreamer:
 
             if is_multi_doc:
                 from app.retrieval.multi_doc import MultiDocRetriever
+
                 multi = MultiDocRetriever()
                 paragraph_results, retrieval_path = await multi.retrieve(
-                    effective_query, doc_ids, mode=mode
+                    effective_query,
+                    doc_ids or [],
+                    mode=mode,
                 )
-                section_results = []
-                for r in paragraph_results[:5]:
-                    section_results.append(r)
-                yield sse_event("retrieval_summary", {
-                    "chunks": [_result_to_chunk(r) for r in section_results],
-                })
+                section_results = paragraph_results[:5]
             elif mode == "naive":
                 naive = NaiveRetriever()
                 if multi_queries and len(multi_queries) > 1:
-                    paragraph_results, retrieval_path = await self._multi_query_naive(naive, multi_queries, doc_id)
+                    paragraph_results, retrieval_path = await self._multi_query_naive(
+                        naive,
+                        multi_queries,
+                        doc_id,
+                    )
                 else:
                     paragraph_results, retrieval_path = await naive.retrieve(effective_query, doc_id)
                 section_results = []
-                yield sse_event("retrieval_summary", {"chunks": []})
             else:
                 hier = HierarchicalRetriever()
                 if multi_queries and len(multi_queries) > 1:
-                    section_results, paragraph_results, retrieval_path = await self._multi_query_hierarchical(hier, multi_queries, doc_id)
+                    section_results, paragraph_results, retrieval_path = await self._multi_query_hierarchical(
+                        hier,
+                        multi_queries,
+                        doc_id,
+                    )
                 else:
                     section_results, paragraph_results, retrieval_path = await hier.retrieve(effective_query, doc_id)
-                yield sse_event("retrieval_summary", {
-                    "chunks": [_result_to_chunk(r) for r in section_results],
-                })
+
+            await _hydrate_result_context(
+                [*section_results, *paragraph_results],
+                fallback_doc_id=doc_id,
+            )
+
+            if is_multi_doc:
+                yield sse_event(
+                    "retrieval_summary",
+                    {"chunks": [_result_to_chunk(result) for result in section_results]},
+                )
+            elif mode == "naive":
+                yield sse_event("retrieval_summary", {"chunks": []})
+            else:
+                yield sse_event(
+                    "retrieval_summary",
+                    {"chunks": [_result_to_chunk(result) for result in section_results]},
+                )
 
             yield sse_event("stage", {"stage": "retrieving_paragraphs", "message": "正在检索段落层..."})
-            yield sse_event("retrieval_paragraphs", {
-                "paragraphs": [_result_to_paragraph(r, idx) for idx, r in enumerate(paragraph_results)],
-            })
+            yield sse_event(
+                "retrieval_paragraphs",
+                {
+                    "paragraphs": [
+                        _result_to_paragraph(result, idx)
+                        for idx, result in enumerate(paragraph_results)
+                    ],
+                },
+            )
             logger.info(f"Retrieval took {time.time() - t_retrieve:.3f}s")
 
             t_generate = time.time()
@@ -110,20 +140,23 @@ class SSEStreamer:
             citations = await extract_citations(full_answer, paragraph_results, doc_id)
 
             from app.scoring.credibility import CredibilityScorer
+
             scorer = CredibilityScorer()
             citations = await scorer.score(full_answer, citations, paragraph_results)
 
             logger.info(f"Total SSE stream took {time.time() - t_start:.3f}s")
 
-            yield sse_event("final", {
-                "answer": full_answer,
-                "citations": citations,
-                "retrieval_path": retrieval_path,
-            })
-
-        except Exception as e:
-            logger.error(f"SSE stream error: {e}")
-            yield sse_event("error", {"message": f"生成回答时出错: {str(e)}"})
+            yield sse_event(
+                "final",
+                {
+                    "answer": full_answer,
+                    "citations": citations,
+                    "retrieval_path": retrieval_path,
+                },
+            )
+        except Exception as exc:
+            logger.error(f"SSE stream error: {exc}")
+            yield sse_event("error", {"message": f"生成回答时出错: {str(exc)}"})
 
     async def _multi_query_naive(
         self,
@@ -132,13 +165,14 @@ class SSEStreamer:
         doc_id: str,
     ) -> tuple[list[RetrievalResult], list[dict]]:
         from app.retrieval.fusion import rrf_fuse
+
         all_results = []
-        for q in queries:
-            results, _ = await naive.retrieve(q, doc_id)
+        for query in queries:
+            results, _ = await naive.retrieve(query, doc_id)
             all_results.append(results)
 
         merged = rrf_fuse(all_results) if len(all_results) > 1 else all_results[0] if all_results else []
-        path = [{"stage": "rewriting", "message": f"多查询融合 {len(queries)} 个子查询"}]
+        path = [{"stage": "rewriting", "message": f"多查询融合了 {len(queries)} 个子查询"}]
         return merged, path
 
     async def _multi_query_hierarchical(
@@ -148,47 +182,158 @@ class SSEStreamer:
         doc_id: str,
     ) -> tuple[list[RetrievalResult], list[RetrievalResult], list[dict]]:
         from app.retrieval.fusion import rrf_fuse
+
         all_section = []
         all_paragraph = []
-        for q in queries:
-            secs, paras, _ = await hier.retrieve(q, doc_id)
-            all_section.append(secs)
-            all_paragraph.append(paras)
+        for query in queries:
+            sections, paragraphs, _ = await hier.retrieve(query, doc_id)
+            all_section.append(sections)
+            all_paragraph.append(paragraphs)
 
         merged_sections = rrf_fuse(all_section) if len(all_section) > 1 else all_section[0] if all_section else []
-        merged_paragraphs = rrf_fuse(all_paragraph) if len(all_paragraph) > 1 else all_paragraph[0] if all_paragraph else []
-        path = [{"stage": "rewriting", "message": f"多查询融合 {len(queries)} 个子查询"}]
+        merged_paragraphs = (
+            rrf_fuse(all_paragraph) if len(all_paragraph) > 1 else all_paragraph[0] if all_paragraph else []
+        )
+        path = [{"stage": "rewriting", "message": f"多查询融合了 {len(queries)} 个子查询"}]
         return merged_sections, merged_paragraphs, path
 
 
-def _result_to_chunk(r: RetrievalResult) -> dict:
-    return {
-        "id": r.chunk_id,
-        "text": normalize_extracted_text(r.content)[:200],
-        "score": round(r.score, 4),
-        "path": [r.section_id or "未知章节"],
+def _result_to_chunk(result: RetrievalResult) -> dict:
+    document_id = _get_result_document_id(result)
+    document_name = _get_result_document_name(result)
+    section_title = _get_result_section_title(result)
+    section_key = _build_section_key(document_id, result.section_id)
+
+    path = []
+    if document_name:
+        path.append(document_name)
+    if section_title:
+        path.append(section_title)
+    elif result.section_id:
+        path.append(result.section_id)
+
+    payload = {
+        "id": result.chunk_id,
+        "text": normalize_extracted_text(result.content)[:200],
+        "score": round(result.score, 4),
+        "path": path or [result.section_id or "未知章节"],
+        "sectionId": result.section_id,
     }
+    if document_id:
+        payload["documentId"] = document_id
+    if document_name:
+        payload["documentName"] = document_name
+    if section_key:
+        payload["sectionKey"] = section_key
+    if section_title:
+        payload["sectionTitle"] = section_title
+    return payload
 
 
-def _resolve_paragraph_index(r: RetrievalResult, fallback_index: int) -> int:
-    if isinstance(r.paragraph_index, int):
-        return r.paragraph_index
+def _resolve_paragraph_index(result: RetrievalResult, fallback_index: int) -> int:
+    if isinstance(result.paragraph_index, int):
+        return result.paragraph_index
 
-    meta_index = r.metadata.get("paragraph_index") if isinstance(r.metadata, dict) else None
+    meta_index = result.metadata.get("paragraph_index") if isinstance(result.metadata, dict) else None
     if isinstance(meta_index, int):
         return meta_index
 
-    # Retrieval may not provide a document-level paragraph index; fallback to
-    # a 1-based rank within the current retrieval result list.
     return fallback_index + 1
 
 
-def _result_to_paragraph(r: RetrievalResult, fallback_index: int) -> dict:
-    return {
-        "id": r.chunk_id,
-        "node_id": r.section_id,
-        "page": r.page,
-        "index": _resolve_paragraph_index(r, fallback_index),
-        "text": normalize_extracted_text(r.content)[:200],
-        "score": round(r.score, 4),
+def _result_to_paragraph(result: RetrievalResult, fallback_index: int) -> dict:
+    document_id = _get_result_document_id(result)
+    document_name = _get_result_document_name(result)
+    section_title = _get_result_section_title(result)
+    section_key = _build_section_key(document_id, result.section_id)
+
+    payload = {
+        "id": result.chunk_id,
+        "node_id": result.section_id,
+        "page": result.page,
+        "index": _resolve_paragraph_index(result, fallback_index),
+        "text": normalize_extracted_text(result.content)[:200],
+        "score": round(result.score, 4),
     }
+    if document_id:
+        payload["documentId"] = document_id
+    if document_name:
+        payload["documentName"] = document_name
+    if section_key:
+        payload["sectionKey"] = section_key
+    if section_title:
+        payload["sectionTitle"] = section_title
+    return payload
+
+
+def _get_result_document_id(result: RetrievalResult) -> Optional[str]:
+    if not isinstance(result.metadata, dict):
+        return None
+    value = result.metadata.get("document_id")
+    if isinstance(value, str) and value.strip():
+        return value
+    return None
+
+
+def _get_result_document_name(result: RetrievalResult) -> Optional[str]:
+    if not isinstance(result.metadata, dict):
+        return None
+    value = result.metadata.get("document_name")
+    if isinstance(value, str) and value.strip():
+        return value
+    return None
+
+
+def _get_result_section_title(result: RetrievalResult) -> Optional[str]:
+    if not isinstance(result.metadata, dict):
+        return None
+    value = result.metadata.get("section_title")
+    if isinstance(value, str) and value.strip():
+        return value
+    return None
+
+
+def _build_section_key(document_id: Optional[str], section_id: Optional[str]) -> Optional[str]:
+    if document_id and section_id:
+        return f"{document_id}:{section_id}"
+    return document_id or section_id
+
+
+async def _hydrate_result_context(
+    results: list[RetrievalResult],
+    fallback_doc_id: Optional[str] = None,
+) -> None:
+    section_titles_by_doc: dict[str, dict[str, str]] = {}
+    doc_ids: list[str] = []
+    seen_doc_ids: set[str] = set()
+
+    for result in results:
+        if not isinstance(result.metadata, dict):
+            result.metadata = {}
+
+        if fallback_doc_id and not result.metadata.get("document_id"):
+            result.metadata["document_id"] = fallback_doc_id
+
+        document_id = _get_result_document_id(result)
+        if not document_id or document_id in seen_doc_ids:
+            continue
+
+        seen_doc_ids.add(document_id)
+        doc_ids.append(document_id)
+
+    for document_id in doc_ids:
+        sections = await get_sections(document_id)
+        section_titles_by_doc[document_id] = {
+            section["id"]: section["title"]
+            for section in sections
+            if section.get("id") and section.get("title")
+        }
+
+    for result in results:
+        document_id = _get_result_document_id(result)
+        if not document_id or not result.section_id:
+            continue
+
+        section_title = section_titles_by_doc.get(document_id, {}).get(result.section_id)
+        if section_title and not result.metadata.get("section_title"):
+            result.metadata["section_title"] = section_title

@@ -8,6 +8,7 @@ import httpx
 from loguru import logger
 
 from app.core.config import get_settings
+from app.exceptions import AppException
 
 
 class EmbeddingService:
@@ -38,13 +39,26 @@ class EmbeddingService:
     def _get_remote_api_key(self) -> str:
         api_key = getattr(self.settings, "embedding_api_key", None) or self.settings.llm_api_key
         if not api_key:
-            raise ValueError("Embedding API key not configured")
+            raise AppException(
+                code="EMBEDDING_CONFIG_ERROR",
+                message="Embedding API key not configured",
+                detail="Embedding API key not configured",
+                status_code=500,
+            )
         return api_key
 
     def _get_remote_url(self) -> str:
-        base_url = getattr(self.settings, "embedding_base_url", None) or self.settings.llm_base_url
+        base_url = getattr(self.settings, "embedding_base_url", None)
         if not base_url:
-            raise ValueError("Embedding base URL not configured")
+            raise AppException(
+                code="EMBEDDING_CONFIG_ERROR",
+                message="Embedding base URL not configured",
+                detail=(
+                    "EMBEDDING_BASE_URL must be configured for remote embedding model "
+                    f"'{self.model_name}'"
+                ),
+                status_code=500,
+            )
 
         normalized = base_url.rstrip("/")
         if normalized.endswith("/embeddings"):
@@ -100,29 +114,70 @@ class EmbeddingService:
             await self._load_model()
 
         if self._use_remote:
-            return await self._encode_remote(texts)
+            return await self._encode_remote(texts, batch_size=batch_size)
 
         return await self._encode_local(texts, batch_size, normalize)
 
-    async def _encode_remote(self, texts: list[str]) -> list[list[float]]:
+    async def _encode_remote(self, texts: list[str], batch_size: int) -> list[list[float]]:
         """Call a remote OpenAI-compatible embedding endpoint."""
         headers = {
             "Authorization": f"Bearer {self._get_remote_api_key()}",
             "Content-Type": "application/json",
         }
+        effective_batch_size = max(1, batch_size)
+        embeddings: list[list[float]] = []
+
+        async with httpx.AsyncClient(timeout=120.0) as client:
+            for i in range(0, len(texts), effective_batch_size):
+                batch = texts[i : i + effective_batch_size]
+                embeddings.extend(
+                    await self._encode_remote_batch(
+                        client,
+                        batch,
+                        headers=headers,
+                    )
+                )
+
+        return embeddings
+
+    async def _encode_remote_batch(
+        self,
+        client: httpx.AsyncClient,
+        texts: list[str],
+        headers: dict[str, str],
+    ) -> list[list[float]]:
+        url = self._get_remote_url()
         payload = {
             "input": texts,
             "model": self.model_name,
         }
 
-        async with httpx.AsyncClient(timeout=120.0) as client:
+        try:
             response = await client.post(
-                self._get_remote_url(),
+                url,
                 headers=headers,
                 json=payload,
             )
             response.raise_for_status()
             data = response.json()
+        except httpx.HTTPStatusError as exc:
+            status_code = exc.response.status_code if exc.response is not None else "unknown"
+            raise AppException(
+                code="EMBEDDING_UPSTREAM_ERROR",
+                message="Embedding upstream request failed",
+                detail=(
+                    f"model={self.model_name} url={url} "
+                    f"status={status_code} detail={exc}"
+                ),
+                status_code=502,
+            ) from exc
+        except httpx.HTTPError as exc:
+            raise AppException(
+                code="EMBEDDING_UPSTREAM_ERROR",
+                message="Embedding upstream request failed",
+                detail=f"model={self.model_name} url={url} detail={exc}",
+                status_code=502,
+            ) from exc
 
         return [item["embedding"] for item in data["data"]]
 

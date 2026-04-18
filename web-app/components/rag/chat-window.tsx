@@ -23,7 +23,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { mockDocumentOverview } from "@/lib/mock/data";
 import { useChatStore } from "@/lib/stores/chat-store";
 import { useDocumentStore } from "@/lib/stores/document-store";
-import { buildPdfPageHref, formatCitationPage, isSuspiciousExtractedText } from "@/lib/utils/citation-preview";
+import { formatCitationPage, isSuspiciousExtractedText } from "@/lib/utils/citation-preview";
+import { getCitationPdfHref as resolveCitationPdfHref } from "@/lib/utils/citation-routing";
 import { cn } from "@/lib/utils";
 import type { Citation, Document } from "@/types";
 import type { DocumentTreeNode } from "@/types/rag";
@@ -340,6 +341,19 @@ export function ChatWindow({
 
   const overviewDocumentName = document?.originalName ?? mockDocumentOverview.documentName;
   const overviewPageCount = document?.pageCount ?? mockDocumentOverview.pageCount;
+  const isMultiDocumentSession = useMemo(() => {
+    if (!Array.isArray(documentIds)) {
+      return false;
+    }
+
+    return (
+      new Set(
+        documentIds
+          .map((value) => value.trim())
+          .filter((value) => value.length > 0),
+      ).size > 1
+    );
+  }, [documentIds]);
   const primaryDocument = useMemo(
     () =>
       document ??
@@ -351,38 +365,13 @@ export function ChatWindow({
     [document, documentId, documents],
   );
 
-  const resolveCitationDocument = (citation: Citation | null) => {
-    if (citation?.documentId) {
-      const byId = documents.find(
-        (candidate) =>
-          candidate.id === citation.documentId || candidate.ragDocumentId === citation.documentId,
-      );
-      if (byId) {
-        return byId;
-      }
-    }
-
-    if (citation?.documentName) {
-      const byName = documents.find(
-        (candidate) =>
-          candidate.originalName === citation.documentName ||
-          candidate.filename === citation.documentName,
-      );
-      if (byName) {
-        return byName;
-      }
-    }
-
-    return primaryDocument;
-  };
-
   const getCitationPdfHref = (citation: Citation) => {
-    const citationDocument = resolveCitationDocument(citation);
-    if (citationDocument?.mimeType !== "application/pdf") {
-      return null;
-    }
-
-    return buildPdfPageHref(citationDocument.filename, citation.page);
+    return resolveCitationPdfHref({
+      citation,
+      documents,
+      primaryDocument,
+      isMultiDocumentSession,
+    });
   };
 
   const submitQuery = async (query: string) => {
@@ -489,6 +478,7 @@ export function ChatWindow({
               <DocumentMindmap
                 tree={(document?.structureTree ?? null) as DocumentTreeNode | null}
                 retrievedChunks={retrievedChunks}
+                activeDocumentId={primaryDocument?.ragDocumentId ?? primaryDocument?.id ?? null}
               />
             </div>
           </div>

@@ -1,8 +1,7 @@
-"""分块策略模块"""
-import asyncio
+"""Chunking strategies for indexing."""
+
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
-from typing import Any, Optional
+from dataclasses import dataclass
 
 from loguru import logger
 
@@ -11,7 +10,8 @@ from app.models import Chunk, ChunkType, Paragraph, Section
 
 @dataclass
 class ChunkResult:
-    """分块结果"""
+    """Chunking result."""
+
     chunks: list[Chunk]
     chunk_count: int
     section_chunks: int = 0
@@ -21,7 +21,7 @@ class ChunkResult:
 
 
 class BaseChunker(ABC):
-    """分块策略抽象基类"""
+    """Base class for chunking strategies."""
 
     def __init__(self, chunk_size: int = 512, chunk_overlap: int = 50):
         self.chunk_size = chunk_size
@@ -34,21 +34,11 @@ class BaseChunker(ABC):
         paragraphs: list[Paragraph],
         doc_id: str,
     ) -> ChunkResult:
-        """执行分块
-
-        Args:
-            sections: 章节列表
-            paragraphs: 段落列表
-            doc_id: 文档ID
-
-        Returns:
-            ChunkResult: 分块结果
-        """
-        pass
+        """Return chunks for a document."""
 
 
 class HierarchicalChunker(BaseChunker):
-    """层级分块策略 - 按章节/段落分块，保持与 Section 的绑定"""
+    """Chunk by section and paragraph while keeping section bindings."""
 
     async def chunk(
         self,
@@ -56,40 +46,45 @@ class HierarchicalChunker(BaseChunker):
         paragraphs: list[Paragraph],
         doc_id: str,
     ) -> ChunkResult:
-        """层级分块"""
         chunks: list[Chunk] = []
         section_chunks = 0
         paragraph_chunks = 0
 
-        # 1. 章节级分块（含摘要）
         for section in sections:
-            section_text = self._merge_paragraphs(section.paragraphs)
-            if section_text:
-                chunks.append(Chunk(
-                    id=f"{doc_id}_sec_{section.id}",
-                    doc_id=doc_id,
-                    content=section_text,
-                    chunk_type=ChunkType.SECTION,
-                    section_id=section.id,
-                    page_numbers=[section.start_page],
-                    position=len(chunks),
-                    char_count=len(section_text),
-                ))
+            for split_index, (section_text, page_number) in enumerate(self._split_section_text(section)):
+                chunk_id = (
+                    f"{doc_id}_sec_{section.id}"
+                    if split_index == 0
+                    else f"{doc_id}_sec_{section.id}_{split_index}"
+                )
+                chunks.append(
+                    Chunk(
+                        id=chunk_id,
+                        doc_id=doc_id,
+                        content=section_text,
+                        chunk_type=ChunkType.SECTION,
+                        section_id=section.id,
+                        page_numbers=[page_number],
+                        position=len(chunks),
+                        char_count=len(section_text),
+                    )
+                )
                 section_chunks += 1
 
-            # 2. 段落级分块
             for para in section.paragraphs:
-                if para.content and len(para.content) >= 50:  # 最小段落长度
-                    chunks.append(Chunk(
-                        id=f"{doc_id}_para_{para.id}",
-                        doc_id=doc_id,
-                        content=para.content,
-                        chunk_type=ChunkType.PARAGRAPH,
-                        section_id=section.id,
-                        page_numbers=[para.page],
-                        position=len(chunks),
-                        char_count=para.char_count,
-                    ))
+                if para.content and len(para.content) >= 50:
+                    chunks.append(
+                        Chunk(
+                            id=f"{doc_id}_para_{para.id}",
+                            doc_id=doc_id,
+                            content=para.content,
+                            chunk_type=ChunkType.PARAGRAPH,
+                            section_id=section.id,
+                            page_numbers=[para.page],
+                            position=len(chunks),
+                            char_count=para.char_count,
+                        )
+                    )
                     paragraph_chunks += 1
 
         logger.info(
@@ -104,13 +99,29 @@ class HierarchicalChunker(BaseChunker):
             paragraph_chunks=paragraph_chunks,
         )
 
+    def _split_section_text(self, section: Section) -> list[tuple[str, int]]:
+        section_text = self._merge_paragraphs(section.paragraphs)
+        if not section_text:
+            return []
+
+        return [
+            (part, section.start_page)
+            for part in self._split_text(section_text)
+        ]
+
     def _merge_paragraphs(self, paragraphs: list[Paragraph]) -> str:
-        """合并段落文本"""
-        return " ".join(p.content for p in paragraphs if p.content)
+        return " ".join(paragraph.content for paragraph in paragraphs if paragraph.content)
+
+    def _split_text(self, text: str) -> list[str]:
+        if len(text) <= self.chunk_size:
+            return [text]
+
+        step = max(1, self.chunk_size - self.chunk_overlap)
+        return [text[i : i + self.chunk_size] for i in range(0, len(text), step)]
 
 
 class NaiveChunker(BaseChunker):
-    """朴素分块策略 - 固定长度分块"""
+    """Fixed-size chunking."""
 
     async def chunk(
         self,
@@ -118,7 +129,6 @@ class NaiveChunker(BaseChunker):
         paragraphs: list[Paragraph],
         doc_id: str,
     ) -> ChunkResult:
-        """固定长度分块"""
         chunks: list[Chunk] = []
         buffer: list[str] = []
         buffer_size = 0
@@ -131,7 +141,6 @@ class NaiveChunker(BaseChunker):
 
             para_size = para.char_count
 
-            # 段落太长，拆分
             if para_size > self.chunk_size:
                 if buffer:
                     chunk = self._create_chunk(doc_id, buffer, chunk_idx)
@@ -141,21 +150,18 @@ class NaiveChunker(BaseChunker):
                     chunk_idx += 1
                     paragraph_chunks += 1
 
-                # 递归拆分长段落
                 sub_chunks = self._split_long_para(para, doc_id, chunk_idx)
                 chunks.extend(sub_chunks)
                 chunk_idx += len(sub_chunks)
                 paragraph_chunks += len(sub_chunks)
                 continue
 
-            # 尝试添加到当前块
             if buffer_size + para_size > self.chunk_size:
                 if buffer:
                     chunk = self._create_chunk(doc_id, buffer, chunk_idx)
                     chunks.append(chunk)
                     paragraph_chunks += 1
 
-                    # 处理重叠
                     if self.chunk_overlap > 0:
                         overlap = self._get_overlap_text(buffer)
                         buffer = [overlap]
@@ -169,7 +175,6 @@ class NaiveChunker(BaseChunker):
             buffer.append(para.content)
             buffer_size += para_size
 
-        # 保存最后一个块
         if buffer:
             chunk = self._create_chunk(doc_id, buffer, chunk_idx)
             chunks.append(chunk)
@@ -184,7 +189,6 @@ class NaiveChunker(BaseChunker):
         )
 
     def _create_chunk(self, doc_id: str, content: list[str], idx: int) -> Chunk:
-        """创建分块"""
         text = " ".join(content)
         return Chunk(
             id=f"{doc_id}_naive_{idx}",
@@ -196,45 +200,45 @@ class NaiveChunker(BaseChunker):
         )
 
     def _get_overlap_text(self, buffer: list[str]) -> str:
-        """获取重叠文本"""
         if len(buffer) <= 1:
             return buffer[0] if buffer else ""
 
-        # 取最后几个元素
         overlap_size = min(self.chunk_overlap, sum(len(t) for t in buffer[-3:]))
         text = buffer[-1]
-        for t in reversed(buffer[:-1]):
+        for item in reversed(buffer[:-1]):
             if overlap_size <= 0:
                 break
-            text = t + " " + text
-            overlap_size -= len(t)
+            text = item + " " + text
+            overlap_size -= len(item)
 
-        return text[: self.chunk_overlap * 5]  # 近似处理
+        return text[: self.chunk_overlap * 5]
 
     def _split_long_para(self, para: Paragraph, doc_id: str, start_idx: int) -> list[Chunk]:
-        """拆分长段落"""
         words = para.content.split()
         chunks: list[Chunk] = []
+        step = max(1, self.chunk_size - self.chunk_overlap)
 
-        for i in range(0, len(words), self.chunk_size - self.chunk_overlap):
-            chunk_words = words[i:i + self.chunk_size]
+        for i in range(0, len(words), step):
+            chunk_words = words[i : i + self.chunk_size]
             text = " ".join(chunk_words)
-            chunks.append(Chunk(
-                id=f"{doc_id}_naive_{start_idx + i}",
-                doc_id=doc_id,
-                content=text,
-                chunk_type=ChunkType.SENTENCE,
-                section_id=para.section_id,
-                page_numbers=[para.page],
-                position=start_idx + len(chunks),
-                char_count=len(text),
-            ))
+            chunks.append(
+                Chunk(
+                    id=f"{doc_id}_naive_{start_idx + i}",
+                    doc_id=doc_id,
+                    content=text,
+                    chunk_type=ChunkType.SENTENCE,
+                    section_id=para.section_id,
+                    page_numbers=[para.page],
+                    position=start_idx + len(chunks),
+                    char_count=len(text),
+                )
+            )
 
         return chunks
 
 
 class SemanticChunker(BaseChunker):
-    """语义分块策略 - 基于句子边界"""
+    """Sentence-boundary chunking."""
 
     async def chunk(
         self,
@@ -242,11 +246,10 @@ class SemanticChunker(BaseChunker):
         paragraphs: list[Paragraph],
         doc_id: str,
     ) -> ChunkResult:
-        """语义分块"""
         import re
 
         chunks: list[Chunk] = []
-        sentence_end = re.compile(r"[。！？\.\!\?]")
+        sentence_end = re.compile(r"[。！？.\!\?]")
         sentence_chunks = 0
 
         for para in paragraphs:
@@ -262,16 +265,18 @@ class SemanticChunker(BaseChunker):
                 if current_size + len(sent) > self.chunk_size:
                     if current_chunk:
                         text = "".join(current_chunk)
-                        chunks.append(Chunk(
-                            id=f"{doc_id}_sem_{len(chunks)}",
-                            doc_id=doc_id,
-                            content=text,
-                            chunk_type=ChunkType.SENTENCE,
-                            section_id=para.section_id,
-                            page_numbers=[para.page],
-                            position=len(chunks),
-                            char_count=current_size,
-                        ))
+                        chunks.append(
+                            Chunk(
+                                id=f"{doc_id}_sem_{len(chunks)}",
+                                doc_id=doc_id,
+                                content=text,
+                                chunk_type=ChunkType.SENTENCE,
+                                section_id=para.section_id,
+                                page_numbers=[para.page],
+                                position=len(chunks),
+                                char_count=current_size,
+                            )
+                        )
                         sentence_chunks += 1
 
                     current_chunk = [sent]
@@ -280,19 +285,20 @@ class SemanticChunker(BaseChunker):
                     current_chunk.append(sent)
                     current_size += len(sent)
 
-            # 保存最后一块
             if current_chunk:
                 text = "".join(current_chunk)
-                chunks.append(Chunk(
-                    id=f"{doc_id}_sem_{len(chunks)}",
-                    doc_id=doc_id,
-                    content=text,
-                    chunk_type=ChunkType.SENTENCE,
-                    section_id=para.section_id,
-                    page_numbers=[para.page],
-                    position=len(chunks),
-                    char_count=current_size,
-                ))
+                chunks.append(
+                    Chunk(
+                        id=f"{doc_id}_sem_{len(chunks)}",
+                        doc_id=doc_id,
+                        content=text,
+                        chunk_type=ChunkType.SENTENCE,
+                        section_id=para.section_id,
+                        page_numbers=[para.page],
+                        position=len(chunks),
+                        char_count=current_size,
+                    )
+                )
                 sentence_chunks += 1
 
         logger.info(f"Semantic chunking: {len(chunks)} chunks created")
@@ -304,11 +310,8 @@ class SemanticChunker(BaseChunker):
         )
 
 
-# ==================== 多粒度分块 ====================
-
-
 class MultiGranularityChunker:
-    """多粒度分块器 - 同时生成 detail 和 summary 向量"""
+    """Generate both detail and summary chunks."""
 
     def __init__(self):
         self.hierarchical = HierarchicalChunker()
@@ -320,47 +323,38 @@ class MultiGranularityChunker:
         paragraphs: list[Paragraph],
         doc_id: str,
     ) -> list[Chunk]:
-        """生成多粒度分块
-
-        返回的 chunks 包含:
-        - detail 向量 (granularity='detail'): 原始段落
-        - summary 向量 (granularity='summary'): 章节摘要
-        """
         chunks: list[Chunk] = []
 
-        # 1. Detail 级别 - 层级分块
         result = await self.hierarchical.chunk(sections, paragraphs, doc_id)
-
         for chunk in result.chunks:
             chunk.granularity = "detail"  # type: ignore
             chunks.append(chunk)
 
-        # 2. Summary 级别 - 章节摘要
         for section in sections:
             if section.paragraphs:
                 summary_text = self._generate_summary(section)
                 if summary_text:
-                    chunks.append(Chunk(
-                        id=f"{doc_id}_sum_{section.id}",
-                        doc_id=doc_id,
-                        content=summary_text,
-                        chunk_type=ChunkType.SECTION,
-                        section_id=section.id,
-                        granularity="summary",  # type: ignore
-                        page_numbers=[section.start_page],
-                        position=len(chunks),
-                        char_count=len(summary_text),
-                    ))
+                    chunks.append(
+                        Chunk(
+                            id=f"{doc_id}_sum_{section.id}",
+                            doc_id=doc_id,
+                            content=summary_text,
+                            chunk_type=ChunkType.SECTION,
+                            section_id=section.id,
+                            granularity="summary",  # type: ignore
+                            page_numbers=[section.start_page],
+                            position=len(chunks),
+                            char_count=len(summary_text),
+                        )
+                    )
 
         return chunks
 
     def _generate_summary(self, section: Section) -> str:
-        """生成章节摘要（抽取式）"""
         if not section.paragraphs:
             return ""
 
-        # 取前2个段落的核心句
-        key_sentences = []
+        key_sentences: list[str] = []
         for para in section.paragraphs[:2]:
             sentences = para.content.split("。")
             if sentences:
